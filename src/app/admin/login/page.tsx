@@ -110,15 +110,6 @@ export default function AdminLoginPage() {
             )}
           </button>
         </form>
-
-        <div className="w-full mt-6 pt-6 border-t border-white/5 flex flex-col gap-3">
-          <Link
-            href="/admin/cadastro"
-            className="w-full text-center py-2.5 bg-transparent border border-brand-gold/30 hover:border-brand-gold text-brand-gold font-sans font-bold text-[10px] uppercase tracking-widest rounded transition-all duration-300"
-          >
-            Cadastrar Novo Administrador
-          </Link>
-        </div>
       </div>
     </div>
   )
