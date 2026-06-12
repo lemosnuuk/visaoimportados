@@ -49,100 +49,20 @@ interface Category {
   slug: string
 }
 
-// Fallback Mock Categories
-const MOCK_CATEGORIES = [
-  { id: '1', name: 'Perfumes', slug: 'perfumes', img: 'https://images.unsplash.com/photo-1541643600914-78b084683601?w=600&auto=format&fit=crop&q=80' },
-  { id: '2', name: 'Eletrônicos', slug: 'eletronicos', img: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&auto=format&fit=crop&q=80' },
-  { id: '3', name: 'Scooters', slug: 'scooters', img: 'https://images.unsplash.com/photo-1606761568499-6d2451b23c66?w=600&auto=format&fit=crop&q=80' },
-  { id: '4', name: 'Informática', slug: 'informatica', img: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=600&auto=format&fit=crop&q=80' },
-  { id: '5', name: 'Games', slug: 'games', img: 'https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=600&auto=format&fit=crop&q=80' },
-  { id: '6', name: 'Smart Home', slug: 'smart-home', img: 'https://images.unsplash.com/photo-1558002038-1055907df827?w=600&auto=format&fit=crop&q=80' },
-  { id: '7', name: 'Gadgets', slug: 'gadgets', img: 'https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?w=600&auto=format&fit=crop&q=80' },
-  { id: '8', name: 'Acessórios', slug: 'acessorios', img: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80' },
-  { id: '9', name: 'Novidades', slug: 'novidades', img: 'https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=600&auto=format&fit=crop&q=80' },
-]
+// Category visual covers mapping
+const CATEGORY_IMAGES: Record<string, string> = {
+  perfumes: 'https://images.unsplash.com/photo-1541643600914-78b084683601?w=600&auto=format&fit=crop&q=80',
+  eletronicos: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&auto=format&fit=crop&q=80',
+  scooters: 'https://images.unsplash.com/photo-1606761568499-6d2451b23c66?w=600&auto=format&fit=crop&q=80',
+  informatica: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=600&auto=format&fit=crop&q=80',
+  games: 'https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=600&auto=format&fit=crop&q=80',
+  'smart-home': 'https://images.unsplash.com/photo-1558002038-1055907df827?w=600&auto=format&fit=crop&q=80',
+  gadgets: 'https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?w=600&auto=format&fit=crop&q=80',
+  acessorios: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80',
+  novidades: 'https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=600&auto=format&fit=crop&q=80'
+}
 
-// Fallback Mock Products
-const MOCK_PRODUCTS: Product[] = [
-  {
-    id: 'p1',
-    name: 'Bleu de Chanel Parfum 100ml',
-    slug: 'bleu-de-chanel-parfum-100ml',
-    description: 'Um perfume amadeirado aromático intenso e sofisticado para homens exigentes.',
-    price: 949.00,
-    sale_price: 899.00,
-    status: 'in_stock',
-    featured: true,
-    display_order: 1,
-    category_name: 'Perfumes',
-    image_url: 'https://images.unsplash.com/photo-1541643600914-78b084683601?w=600&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'p2',
-    name: 'iPhone 16 Pro Max 256GB Gold Titanium',
-    slug: 'iphone-16-pro-max-256gb-gold',
-    description: 'O iPhone definitivo com tela Super Retina XDR de 6.9 polegadas, câmera de 48MP e chip A18 Pro.',
-    price: 9899.00,
-    sale_price: null,
-    status: 'pre_order',
-    featured: true,
-    display_order: 2,
-    category_name: 'Eletrônicos',
-    image_url: 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=600&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'p3',
-    name: 'Scooter Elétrica Kaabo Mantis King GT',
-    slug: 'scooter-eletrica-kaabo-mantis-king-gt',
-    description: 'Desempenho e luxo off-road com velocidade máxima de 70km/h e suspensão hidráulica ajustável.',
-    price: 13900.00,
-    sale_price: 12900.00,
-    status: 'on_request',
-    featured: true,
-    display_order: 3,
-    category_name: 'Scooters',
-    image_url: 'https://images.unsplash.com/photo-1606761568499-6d2451b23c66?w=600&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'p4',
-    name: 'MacBook Pro M4 Pro 16" Space Black',
-    slug: 'macbook-pro-m4-pro-16-space-black',
-    description: 'Superpoderoso para fluxos de trabalho avançados com chip M4 Pro, 24GB de RAM e 512GB SSD.',
-    price: 24999.00,
-    sale_price: null,
-    status: 'pre_order',
-    featured: true,
-    display_order: 4,
-    category_name: 'Informática',
-    image_url: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=600&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'p5',
-    name: 'PlayStation 5 Pro 2TB',
-    slug: 'playstation-5-pro-2tb',
-    description: 'A experiência de jogo definitiva com ray tracing avançado, taxas de quadros super altas e 2TB de armazenamento.',
-    price: 6999.00,
-    sale_price: null,
-    status: 'in_stock',
-    featured: true,
-    display_order: 5,
-    category_name: 'Games',
-    image_url: 'https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=600&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'p6',
-    name: 'Apple Watch Ultra 2 Ocean Band',
-    slug: 'apple-watch-ultra-2-ocean-band',
-    description: 'O relógio de aventura definitivo com caixa de titânio de 49 mm, GPS de dupla frequência e bateria de até 36 horas.',
-    price: 7499.00,
-    sale_price: 6999.00,
-    status: 'in_stock',
-    featured: true,
-    display_order: 6,
-    category_name: 'Gadgets',
-    image_url: 'https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?w=600&auto=format&fit=crop&q=80'
-  }
-]
+const DEFAULT_CATEGORY_IMAGE = 'https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=600&auto=format&fit=crop&q=80'
 
 // Minimalist Curation Info
 export default function Home() {
@@ -171,10 +91,11 @@ export default function Home() {
   const opacityHero = useTransform(scrollY, [0, 450], [1, 0])
 
   // Top products displayed in the hero section
-  const heroProducts = featuredProducts.length > 0 ? featuredProducts.slice(0, 3) : MOCK_PRODUCTS.slice(0, 3)
+  const heroProducts = featuredProducts.slice(0, 3)
 
   // Auto-play hero showcase
   useEffect(() => {
+    if (heroProducts.length === 0) return
     const timer = setInterval(() => {
       setActiveHeroIndex((prev) => (prev + 1) % heroProducts.length)
     }, 6000)
@@ -206,7 +127,7 @@ export default function Home() {
         if (dbCategories && dbCategories.length > 0) {
           setCategories(dbCategories)
         } else {
-          setCategories(MOCK_CATEGORIES)
+          setCategories([])
         }
 
         if (dbProducts && dbProducts.length > 0) {
@@ -230,12 +151,12 @@ export default function Home() {
           })
           setFeaturedProducts(formattedProducts)
         } else {
-          setFeaturedProducts(MOCK_PRODUCTS)
+          setFeaturedProducts([])
         }
       } catch (err) {
         console.error('Error fetching data from Supabase, using mock data.', err)
-        setCategories(MOCK_CATEGORIES)
-        setFeaturedProducts(MOCK_PRODUCTS)
+        setCategories([])
+        setFeaturedProducts([])
       } finally {
         setLoading(false)
       }
@@ -429,12 +350,13 @@ export default function Home() {
 
           {/* Right Column: E-commerce Product Showcase Card */}
           <div className="lg:col-span-5 w-full flex justify-center lg:justify-end">
-            <motion.div
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              className="relative w-full max-w-[360px] sm:max-w-[380px] aspect-[4/5] mx-auto lg:mx-0"
-            >
+            {heroProducts.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, x: 30 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+                className="relative w-full max-w-[360px] sm:max-w-[380px] aspect-[4/5] mx-auto lg:mx-0"
+              >
               {/* Soft ambient lighting glow behind the card */}
               <div className="absolute inset-0 bg-brand-gold/10 blur-[80px] rounded-full pointer-events-none -z-10" />
               
@@ -533,6 +455,7 @@ export default function Home() {
                 ))}
               </div>
             </motion.div>
+            )}
           </div>
 
         </div>
@@ -642,7 +565,7 @@ export default function Home() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {categories.slice(0, 9).map((cat) => {
               // Find matching visual image
-              const mockCat = MOCK_CATEGORIES.find((mc) => mc.slug === cat.slug) || MOCK_CATEGORIES[8]
+              const imgUrl = CATEGORY_IMAGES[cat.slug] || DEFAULT_CATEGORY_IMAGE
               return (
                 <Link
                   key={cat.id}
@@ -650,7 +573,7 @@ export default function Home() {
                   className="relative h-64 group overflow-hidden rounded border border-white/5 flex flex-col justify-end p-6 hover:border-brand-gold/50 transition-all duration-500"
                 >
                   <Image
-                    src={mockCat.img}
+                    src={imgUrl}
                     alt={cat.name}
                     fill
                     className="object-cover absolute inset-0 z-0 group-hover:scale-110 transition-transform duration-700 brightness-[0.45] group-hover:brightness-[0.3]"

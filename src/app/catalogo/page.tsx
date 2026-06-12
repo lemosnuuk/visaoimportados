@@ -31,132 +31,7 @@ interface Category {
   slug: string
 }
 
-const MOCK_CATEGORIES = [
-  { id: '1', name: 'Perfumes', slug: 'perfumes' },
-  { id: '2', name: 'Eletrônicos', slug: 'eletronicos' },
-  { id: '3', name: 'Scooters', slug: 'scooters' },
-  { id: '4', name: 'Informática', slug: 'informatica' },
-  { id: '5', name: 'Games', slug: 'games' },
-  { id: '6', name: 'Smart Home', slug: 'smart-home' },
-  { id: '7', name: 'Gadgets', slug: 'gadgets' },
-  { id: '8', name: 'Acessórios', slug: 'acessorios' },
-  { id: '9', name: 'Novidades', slug: 'novidades' }
-]
 
-const MOCK_PRODUCTS: Product[] = [
-  {
-    id: 'p1',
-    name: 'Bleu de Chanel Parfum 100ml',
-    slug: 'bleu-de-chanel-parfum-100ml',
-    description: 'Um perfume amadeirado aromático intenso e sofisticado para homens exigentes.',
-    price: 949.00,
-    sale_price: 899.00,
-    status: 'in_stock',
-    featured: true,
-    display_order: 1,
-    category_name: 'Perfumes',
-    category_slug: 'perfumes',
-    image_url: 'https://images.unsplash.com/photo-1541643600914-78b084683601?w=600&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'p2',
-    name: 'iPhone 16 Pro Max 256GB Gold Titanium',
-    slug: 'iphone-16-pro-max-256gb-gold',
-    description: 'O iPhone definitivo com tela Super Retina XDR de 6.9 polegadas, câmera de 48MP e chip A18 Pro.',
-    price: 9899.00,
-    sale_price: null,
-    status: 'pre_order',
-    featured: true,
-    display_order: 2,
-    category_name: 'Eletrônicos',
-    category_slug: 'eletronicos',
-    image_url: 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=600&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'p3',
-    name: 'Scooter Elétrica Kaabo Mantis King GT',
-    slug: 'scooter-eletrica-kaabo-mantis-king-gt',
-    description: 'Desempenho e luxo off-road com velocidade máxima de 70km/h e suspensão hidráulica ajustável.',
-    price: 13900.00,
-    sale_price: 12900.00,
-    status: 'on_request',
-    featured: true,
-    display_order: 3,
-    category_name: 'Scooters',
-    category_slug: 'scooters',
-    image_url: 'https://images.unsplash.com/photo-1606761568499-6d2451b23c66?w=600&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'p4',
-    name: 'MacBook Pro M4 Pro 16" Space Black',
-    slug: 'macbook-pro-m4-pro-16-space-black',
-    description: 'Superpoderoso para fluxos de trabalho avançados com chip M4 Pro, 24GB de RAM e 512GB SSD.',
-    price: 24999.00,
-    sale_price: null,
-    status: 'pre_order',
-    featured: true,
-    display_order: 4,
-    category_name: 'Informática',
-    category_slug: 'informatica',
-    image_url: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=600&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'p5',
-    name: 'PlayStation 5 Pro 2TB',
-    slug: 'playstation-5-pro-2tb',
-    description: 'A experiência de jogo definitiva com ray tracing avançado, taxas de quadros super altas e 2TB de armazenamento.',
-    price: 6999.00,
-    sale_price: null,
-    status: 'in_stock',
-    featured: true,
-    display_order: 5,
-    category_name: 'Games',
-    category_slug: 'games',
-    image_url: 'https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=600&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'p6',
-    name: 'Apple Watch Ultra 2 Ocean Band',
-    slug: 'apple-watch-ultra-2-ocean-band',
-    description: 'O relógio de aventura definitivo com caixa de titânio de 49 mm, GPS de dupla frequência e bateria de até 36 horas.',
-    price: 7499.00,
-    sale_price: 6999.00,
-    status: 'in_stock',
-    featured: true,
-    display_order: 6,
-    category_name: 'Gadgets',
-    category_slug: 'gadgets',
-    image_url: 'https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?w=600&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'p7',
-    name: 'Creed Aventus Eau de Parfum 100ml',
-    slug: 'creed-aventus-eau-de-parfum-100ml',
-    description: 'Um perfume icônico frutado rico, celebrando força, poder e sucesso.',
-    price: 2490.00,
-    sale_price: null,
-    status: 'in_stock',
-    display_order: 7,
-    category_name: 'Perfumes',
-    category_slug: 'perfumes',
-    image_url: 'https://images.unsplash.com/photo-1594035910387-fea47794261f?w=600&auto=format&fit=crop&q=80',
-    featured: false
-  },
-  {
-    id: 'p8',
-    name: 'iPad Pro 13" M4 256GB Wi-Fi',
-    slug: 'ipad-pro-13-m4-256gb',
-    description: 'Incrivelmente fino, com o desempenho revolucionário do chip Apple M4 e tela Ultra Retina XDR.',
-    price: 13200.00,
-    sale_price: 12500.00,
-    status: 'pre_order',
-    display_order: 8,
-    category_name: 'Eletrônicos',
-    category_slug: 'eletronicos',
-    image_url: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=600&auto=format&fit=crop&q=80',
-    featured: false
-  }
-]
 
 function CatalogContent() {
   const { addToCart } = useCart()
@@ -206,7 +81,7 @@ function CatalogContent() {
         if (dbCategories && dbCategories.length > 0) {
           setCategories(dbCategories)
         } else {
-          setCategories(MOCK_CATEGORIES)
+          setCategories([])
         }
 
         if (dbProducts && dbProducts.length > 0) {
@@ -231,12 +106,12 @@ function CatalogContent() {
           })
           setProducts(formattedProducts)
         } else {
-          setProducts(MOCK_PRODUCTS)
+          setProducts([])
         }
       } catch (err) {
         console.error('Error querying Supabase in Catalog, fall backing.', err)
-        setCategories(MOCK_CATEGORIES)
-        setProducts(MOCK_PRODUCTS)
+        setCategories([])
+        setProducts([])
       } finally {
         setLoading(false)
       }

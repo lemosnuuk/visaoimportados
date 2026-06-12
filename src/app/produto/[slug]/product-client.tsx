@@ -72,33 +72,7 @@ export default function ProductClientPage({ product }: { product: Product }) {
           })
           setRelatedProducts(formatted)
         } else {
-          // Generate static related products of same category
-          // Simple mock filter
-          const mockRelated = [
-            {
-              id: 'p7',
-              name: 'Creed Aventus Eau de Parfum 100ml',
-              slug: 'creed-aventus-eau-de-parfum-100ml',
-              description: 'Um perfume icônico frutado rico, celebrando força, poder e sucesso.',
-              price: 2490.00,
-              sale_price: null,
-              status: 'in_stock',
-              category_name: 'Perfumes',
-              image_url: 'https://images.unsplash.com/photo-1594035910387-fea47794261f?w=600&auto=format&fit=crop&q=80'
-            },
-            {
-              id: 'p8',
-              name: 'iPad Pro 13" M4 256GB Wi-Fi',
-              slug: 'ipad-pro-13-m4-256gb',
-              description: 'Incrivelmente fino, com o desempenho revolucionário do chip Apple M4 e tela Ultra Retina XDR.',
-              price: 13200.00,
-              sale_price: 12500.00,
-              status: 'pre_order',
-              category_name: 'Eletrônicos',
-              image_url: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=600&auto=format&fit=crop&q=80'
-            }
-          ].filter(p => p.category_name === product.category_name && p.slug !== product.slug)
-          setRelatedProducts(mockRelated)
+          setRelatedProducts([])
         }
       } catch (err) {
         console.error('Error fetching related products from Supabase', err)
