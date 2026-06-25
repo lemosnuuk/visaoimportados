@@ -27,7 +27,7 @@ export default function CartPage() {
     e.preventDefault()
     if (cart.length === 0 || !nome || !telefone) return
 
-    const whatsappNumber = '5511999999999' // Official company number
+    const whatsappNumber = '5518997190799' // Official company number
     
     // Compile items list
     const itemsList = cart.map((item) => {
@@ -220,7 +220,7 @@ export default function CartPage() {
                     <input
                       type="tel"
                       required
-                      placeholder="Ex: (11) 99999-9999"
+                      placeholder="Ex: (18) 99719-0799"
                       value={telefone}
                       onChange={(e) => setTelefone(e.target.value)}
                       className="w-full bg-black border border-white/10 rounded px-4 py-3 text-xs font-sans focus:outline-none focus:border-brand-gold text-white"

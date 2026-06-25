@@ -78,7 +78,7 @@ export default function Footer() {
           <ul className="flex flex-col gap-3 text-xs font-sans">
             <li className="flex items-center gap-2">
               <Phone className="w-4 h-4 text-brand-gold shrink-0" />
-              <span>(11) 99999-9999</span>
+              <span>(18) 99719-0799</span>
             </li>
             <li className="flex items-center gap-2">
               <Instagram className="w-4 h-4 text-brand-gold shrink-0" />

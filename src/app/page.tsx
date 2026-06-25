@@ -114,6 +114,52 @@ const heroColumns = [
   }
 ]
 
+const diferenciaisData = [
+  {
+    id: '01',
+    title: 'Produtos 100% Originais',
+    tagline: 'PROCEDÊNCIA GARANTIDA',
+    desc: 'Trabalhamos exclusivamente com produtos 100% autênticos, importados diretamente dos canais oficiais das marcas mais prestigiadas do mundo, com rastreabilidade completa.',
+    image: 'https://images.unsplash.com/photo-1594035910387-fea47794261f?w=1000&auto=format&fit=crop&q=80'
+  },
+  {
+    id: '02',
+    title: 'Importação Segura e Segurada',
+    tagline: 'LOGÍSTICA AVANÇADA',
+    desc: 'Logística internacional consolidada com desembaraço aduaneiro completo. Cada importação é totalmente segurada contra extravios ou danos do ponto de origem até as suas mãos.',
+    image: 'https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?w=1000&auto=format&fit=crop&q=80'
+  },
+  {
+    id: '03',
+    title: 'Atendimento VIP e Concierge',
+    tagline: 'EXPERIÊNCIA EXCLUSIVA',
+    desc: 'Você conta com a assessoria de um personal shopper dedicado via WhatsApp para localizar, cotar e negociar os itens mais exclusivos do mercado global de forma ágil e sob medida.',
+    image: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1000&auto=format&fit=crop&q=80'
+  },
+  {
+    id: '04',
+    title: 'Entrega Premium Nacional',
+    tagline: 'DISTRIBUIÇÃO VIP',
+    desc: 'Despachamos suas encomendas para todo o território nacional através de transportadoras expressas e serviços VIP, garantindo embalagem blindada e entrega segurada rápida.',
+    image: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=1000&auto=format&fit=crop&q=80'
+  },
+  {
+    id: '05',
+    title: 'Acesso a Lançamentos Globais',
+    tagline: 'EXCLUSIVIDADE ABSOLUTA',
+    desc: 'Adquira perfumes de alta costura, eletrônicos topo de linha e edições limitadas globais no mesmo dia de seus lançamentos internacionais, sem precisar esperar pela chegada oficial ao mercado brasileiro.',
+    image: 'https://images.unsplash.com/photo-1509319117193-57bab727e09d?w=1000&auto=format&fit=crop&q=80'
+  },
+  {
+    id: '06',
+    title: 'Garantia Real de Procedência',
+    tagline: 'CONFIANÇA TOTAL',
+    desc: 'Fornecemos total transparência sobre a origem de cada lote e item. Todas as compras acompanham número de série rastreável, atestado de procedência e suporte pós-venda direto.',
+    image: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?w=1000&auto=format&fit=crop&q=80'
+  }
+]
+
+
 // Minimalist Curation Info
 export default function Home() {
   const { addToCart } = useCart()
@@ -123,6 +169,10 @@ export default function Home() {
 
   // Hero columns hovered index state
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
+
+  // Active differentiator index state
+  const [activeDifIndex, setActiveDifIndex] = useState(0)
+
 
   // Responsive state for vertical stack heights
   const [isMobile, setIsMobile] = useState(false)
@@ -220,7 +270,7 @@ export default function Home() {
     e.preventDefault()
     if (!cotacaoProduto) return
 
-    const whatsappNumber = '5511999999999' // Official company number
+    const whatsappNumber = '5518997190799' // Official company number
     const text = encodeURIComponent(
       `Olá, gostaria de solicitar uma cotação para o seguinte produto:\n\n` +
       `📦 *Produto:* ${cotacaoProduto}\n` +
@@ -236,7 +286,7 @@ export default function Home() {
     e.preventDefault()
     if (!contatoNome || !contatoMensagem) return
 
-    const whatsappNumber = '5511999999999'
+    const whatsappNumber = '5518997190799'
     const text = encodeURIComponent(
       `Olá, meu nome é *${contatoNome}* (${contatoEmail || 'email não informado'}).\n\n` +
       `Mensagem:\n${contatoMensagem}`
@@ -419,81 +469,110 @@ export default function Home() {
       </section>
 
 
-      {/* DIFERENCIAIS SECTION */}
-      <section className="bg-black py-24 border-y border-white/5 relative z-20">
+      {/* DIFERENCIAIS SECTION - SHOWCASE INTERATIVO */}
+      <section className="bg-black py-28 border-y border-white/5 relative z-20 overflow-hidden">
+        {/* Ambient background glows */}
+        <div className="absolute top-[20%] left-[-10%] w-[450px] h-[450px] bg-brand-gold/5 blur-[130px] rounded-full pointer-events-none -z-10" />
+        <div className="absolute bottom-[20%] right-[-10%] w-[450px] h-[450px] bg-brand-gold/5 blur-[130px] rounded-full pointer-events-none -z-10" />
+
         <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <span className="text-brand-gold text-[10px] font-sans font-bold tracking-widest uppercase">Por que nos escolher?</span>
-            <h2 className="font-title text-2xl sm:text-4xl text-white uppercase mt-2 tracking-wide">DIFERENCIAIS EXCLUSIVOS</h2>
-            <div className="w-12 h-0.5 bg-brand-gold mx-auto mt-4" />
+          
+          {/* Header */}
+          <div className="text-center lg:text-left mb-16">
+            <span className="text-brand-gold text-[10px] font-sans font-bold tracking-[0.25em] uppercase">Excelência & Segurança</span>
+            <h2 className="font-title text-3xl sm:text-4xl text-white uppercase mt-2 tracking-wide">Diferenciais Exclusivos</h2>
+            <div className="w-16 h-0.5 bg-brand-gold mt-4 mx-auto lg:mx-0" />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Card 1 */}
-            <div className="p-8 bg-brand-black border border-white/5 hover:border-brand-gold/30 rounded-lg group transition-all duration-500 hover:-translate-y-1">
-              <div className="w-12 h-12 bg-white/5 group-hover:bg-brand-gold/10 border border-white/10 group-hover:border-brand-gold/30 rounded flex items-center justify-center mb-6 transition-all duration-300">
-                <Sparkles className="w-6 h-6 text-brand-gold" />
-              </div>
-              <h3 className="font-title text-base text-white mb-3">Produtos Originais</h3>
-              <p className="font-sans text-xs text-brand-silver leading-relaxed">
-                Importamos apenas produtos com 100% de autenticidade garantida direto de seus fabricantes e distribuidores oficiais no exterior.
-              </p>
+          {/* Interactive Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+            
+            {/* Left Column: Selector List */}
+            <div className="lg:col-span-6 flex flex-col gap-2">
+              {diferenciaisData.map((dif, idx) => {
+                const isActive = activeDifIndex === idx;
+                return (
+                  <button
+                    key={dif.id}
+                    onMouseEnter={() => setActiveDifIndex(idx)}
+                    onClick={() => setActiveDifIndex(idx)}
+                    className="w-full text-left flex items-start gap-6 p-5 rounded-xl border border-transparent hover:border-white/5 hover:bg-white/[0.02] focus:outline-none transition-all duration-300 group/item cursor-pointer"
+                  >
+                    {/* Big Serif Number */}
+                    <span className={`font-title text-2xl lg:text-3xl font-extralight tracking-wider transition-colors duration-500 shrink-0 ${isActive ? 'text-brand-gold' : 'text-brand-silver/30 group-hover/item:text-brand-silver/60'}`}>
+                      {dif.id}
+                    </span>
+
+                    {/* Content */}
+                    <div className="flex flex-col gap-1 w-full">
+                      <h3 className={`font-title text-sm lg:text-base uppercase tracking-wider transition-colors duration-500 ${isActive ? 'text-white' : 'text-brand-silver/50 group-hover/item:text-brand-silver/80'}`}>
+                        {dif.title}
+                      </h3>
+                      
+                      {/* Active gold underline indicator */}
+                      <div className="relative h-px w-full bg-white/5 mt-2">
+                        {isActive && (
+                          <motion.div
+                            layoutId="activeDifLine"
+                            className="absolute inset-y-0 left-0 bg-brand-gold w-24 h-px"
+                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
 
-            {/* Card 2 */}
-            <div className="p-8 bg-brand-black border border-white/5 hover:border-brand-gold/30 rounded-lg group transition-all duration-500 hover:-translate-y-1">
-              <div className="w-12 h-12 bg-white/5 group-hover:bg-brand-gold/10 border border-white/10 group-hover:border-brand-gold/30 rounded flex items-center justify-center mb-6 transition-all duration-300">
-                <ShieldCheck className="w-6 h-6 text-brand-gold" />
-              </div>
-              <h3 className="font-title text-base text-white mb-3">Importação Segura</h3>
-              <p className="font-sans text-xs text-brand-silver leading-relaxed">
-                Logística consolidada com todos os trâmites aduaneiros simplificados. Garantimos a chegada segura e legal do seu produto.
-              </p>
+            {/* Right Column: Holographic Glass Cinematic Preview Panel */}
+            <div className="lg:col-span-6 w-full h-[380px] lg:h-[450px]">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeDifIndex}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.5, ease: "easeOut" }}
+                  className="relative w-full h-full bg-neutral-950/20 border border-white/10 rounded-2xl overflow-hidden p-8 flex flex-col justify-end backdrop-blur-xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8)] group/preview"
+                >
+                  {/* Dynamic Background Image inside panel */}
+                  <Image
+                    src={diferenciaisData[activeDifIndex].image}
+                    alt={diferenciaisData[activeDifIndex].title}
+                    fill
+                    priority
+                    className="object-cover absolute inset-0 z-0 brightness-[0.3] group-hover/preview:scale-105 transition-transform duration-700 pointer-events-none select-none"
+                  />
+                  
+                  {/* Glass Card Blur Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent z-10 pointer-events-none" />
+
+                  {/* Panel Content (Floating on top of blurred visual) */}
+                  <div className="relative z-20 flex flex-col items-start gap-4">
+                    
+                    {/* Tagline */}
+                    <span className="text-brand-gold text-[9px] font-sans font-bold tracking-[0.2em] uppercase bg-brand-gold/10 px-2.5 py-1 border border-brand-gold/25 rounded">
+                      {diferenciaisData[activeDifIndex].tagline}
+                    </span>
+
+                    {/* Title */}
+                    <h3 className="font-title text-xl sm:text-2xl text-white uppercase tracking-wider">
+                      {diferenciaisData[activeDifIndex].title}
+                    </h3>
+
+                    {/* Separator */}
+                    <div className="w-12 h-0.5 bg-brand-gold" />
+
+                    {/* Description */}
+                    <p className="font-sans text-xs sm:text-sm text-brand-silver/90 leading-relaxed max-w-lg">
+                      {diferenciaisData[activeDifIndex].desc}
+                    </p>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
             </div>
 
-            {/* Card 3 */}
-            <div className="p-8 bg-brand-black border border-white/5 hover:border-brand-gold/30 rounded-lg group transition-all duration-500 hover:-translate-y-1">
-              <div className="w-12 h-12 bg-white/5 group-hover:bg-brand-gold/10 border border-white/10 group-hover:border-brand-gold/30 rounded flex items-center justify-center mb-6 transition-all duration-300">
-                <UserCheck className="w-6 h-6 text-brand-gold" />
-              </div>
-              <h3 className="font-title text-base text-white mb-3">Atendimento Personalizado</h3>
-              <p className="font-sans text-xs text-brand-silver leading-relaxed">
-                Nossos consultores prestam suporte integral de ponta a ponta, oferecendo atendimento executivo humanizado via WhatsApp.
-              </p>
-            </div>
-
-            {/* Card 4 */}
-            <div className="p-8 bg-brand-black border border-white/5 hover:border-brand-gold/30 rounded-lg group transition-all duration-500 hover:-translate-y-1">
-              <div className="w-12 h-12 bg-white/5 group-hover:bg-brand-gold/10 border border-white/10 group-hover:border-brand-gold/30 rounded flex items-center justify-center mb-6 transition-all duration-300">
-                <Truck className="w-6 h-6 text-brand-gold" />
-              </div>
-              <h3 className="font-title text-base text-white mb-3">Entrega Nacional</h3>
-              <p className="font-sans text-xs text-brand-silver leading-relaxed">
-                Despachamos para todo o território nacional através de transportadoras premium especializadas com seguro integral da carga.
-              </p>
-            </div>
-
-            {/* Card 5 */}
-            <div className="p-8 bg-brand-black border border-white/5 hover:border-brand-gold/30 rounded-lg group transition-all duration-500 hover:-translate-y-1">
-              <div className="w-12 h-12 bg-white/5 group-hover:bg-brand-gold/10 border border-white/10 group-hover:border-brand-gold/30 rounded flex items-center justify-center mb-6 transition-all duration-300">
-                <TrendingUp className="w-6 h-6 text-brand-gold" />
-              </div>
-              <h3 className="font-title text-base text-white mb-3">Produtos Exclusivos</h3>
-              <p className="font-sans text-xs text-brand-silver leading-relaxed">
-                Acesso antecipado a lançamentos globais que não estão disponíveis no mercado nacional tradicional.
-              </p>
-            </div>
-
-            {/* Card 6 */}
-            <div className="p-8 bg-brand-black border border-white/5 hover:border-brand-gold/30 rounded-lg group transition-all duration-500 hover:-translate-y-1">
-              <div className="w-12 h-12 bg-white/5 group-hover:bg-brand-gold/10 border border-white/10 group-hover:border-brand-gold/30 rounded flex items-center justify-center mb-6 transition-all duration-300">
-                <HelpCircle className="w-6 h-6 text-brand-gold" />
-              </div>
-              <h3 className="font-title text-base text-white mb-3">Garantia de Procedência</h3>
-              <p className="font-sans text-xs text-brand-silver leading-relaxed">
-                Rastreabilidade completa do produto desde o embarque no país de origem até a entrega em suas mãos.
-              </p>
-            </div>
           </div>
         </div>
       </section>
@@ -819,7 +898,7 @@ export default function Home() {
                     </div>
                     <div>
                       <h4 className="font-title text-[10px] uppercase text-brand-gold tracking-widest">WhatsApp Oficial</h4>
-                      <p className="font-sans text-xs text-white mt-1">(11) 99999-9999</p>
+                      <p className="font-sans text-xs text-white mt-1">(18) 99719-0799</p>
                     </div>
                   </div>
 
@@ -843,15 +922,7 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
-                      <MapPin className="w-5 h-5 text-brand-gold" />
-                    </div>
-                    <div>
-                      <h4 className="font-title text-[10px] uppercase text-brand-gold tracking-widest">Localização</h4>
-                      <p className="font-sans text-xs text-white mt-1">Escritório Central de Importações, São Paulo - SP</p>
-                    </div>
-                  </div>
+
                 </div>
               </div>
 
