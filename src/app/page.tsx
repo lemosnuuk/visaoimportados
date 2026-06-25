@@ -64,6 +64,56 @@ const CATEGORY_IMAGES: Record<string, string> = {
 
 const DEFAULT_CATEGORY_IMAGE = 'https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=600&auto=format&fit=crop&q=80'
 
+// Framer Motion staggered animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.12,
+      delayChildren: 0.15
+    }
+  }
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 25 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.8,
+      ease: [0.16, 1, 0.3, 1] as any
+    }
+  }
+}
+const heroColumns = [
+  {
+    title: 'Perfumes Importados',
+    subtitle: 'FRAGRÂNCIAS EXCLUSIVAS',
+    description: 'Explore uma curadoria seleta de perfumes importados de grifes renomadas internacionalmente. Pronta entrega ou sob encomenda.',
+    bgImage: 'https://images.unsplash.com/photo-1541643600914-78b084683601?w=1200&auto=format&fit=crop&q=80',
+    buttonText: 'Explorar Perfumes',
+    link: '/catalogo?categoria=perfumes'
+  },
+  {
+    title: 'Eletrônicos Premium',
+    subtitle: 'TECNOLOGIA DE PONTA',
+    description: 'Os últimos lançamentos de smartphones, smartwatches e acessórios importados legítimos com garantia de procedência.',
+    bgImage: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=1200&auto=format&fit=crop&q=80',
+    buttonText: 'Ver Dispositivos',
+    link: '/catalogo?categoria=eletronicos'
+  },
+  {
+    title: 'Concierge Importados',
+    subtitle: 'SERVIÇO EXECUTIVE & LUXURY',
+    description: 'Deseja encomendar um relógio exclusivo, joias ou eletrônicos raros? Cuidamos de todo o processo de importação para você.',
+    bgImage: 'https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?w=1200&auto=format&fit=crop&q=80',
+    buttonText: 'Solicitar Cotação',
+    link: '#cotacao'
+  }
+]
+
 // Minimalist Curation Info
 export default function Home() {
   const { addToCart } = useCart()
@@ -71,8 +121,20 @@ export default function Home() {
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Hero showcase active index
-  const [activeHeroIndex, setActiveHeroIndex] = useState(0)
+  // Hero columns hovered index state
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
+
+  // Responsive state for vertical stack heights
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 1024)
+    }
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   // Cotação Sob Demanda Form State
   const [cotacaoProduto, setCotacaoProduto] = useState('')
@@ -89,18 +151,6 @@ export default function Home() {
   const yBg = useTransform(scrollY, [0, 600], [0, 200])
   const yText = useTransform(scrollY, [0, 500], [0, -80])
   const opacityHero = useTransform(scrollY, [0, 450], [1, 0])
-
-  // Top products displayed in the hero section
-  const heroProducts = featuredProducts.slice(0, 3)
-
-  // Auto-play hero showcase
-  useEffect(() => {
-    if (heroProducts.length === 0) return
-    const timer = setInterval(() => {
-      setActiveHeroIndex((prev) => (prev + 1) % heroProducts.length)
-    }, 6000)
-    return () => clearInterval(timer)
-  }, [heroProducts.length])
 
   useEffect(() => {
     async function loadData() {
@@ -231,243 +281,138 @@ export default function Home() {
     <>
       <Navbar />
 
-      {/* HERO SECTION */}
-      <section id="home" className="relative min-h-screen lg:h-screen w-full overflow-hidden bg-black flex flex-col justify-center py-24 lg:py-0">
-        {/* Cinematic Parallax Background */}
-        <motion.div 
-          style={{ y: yBg, opacity: opacityHero }}
-          className="absolute inset-0 z-0"
-        >
-          <div className="absolute inset-0 bg-gradient-to-b from-black/85 via-black/60 to-black z-10" />
-          <Image
-            src="/assets/hero_bg.png"
-            alt="Visão Importados Background"
-            fill
-            priority
-            className="object-cover scale-105 filter brightness-[0.12] select-none"
-          />
-        </motion.div>
-
-        {/* Ambient Grid Overlay */}
+      {/* HERO SECTION - SPLIT-SCREEN HOVER GRID */}
+      <section id="home" className="relative min-h-screen lg:h-screen w-full bg-black overflow-hidden flex flex-col lg:flex-row z-30">
+        
+        {/* Decorative Grid Overlay */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff01_1px,transparent_1px),linear-gradient(to_bottom,#ffffff01_1px,transparent_1px)] bg-[size:6rem_6rem] z-10 pointer-events-none" />
 
-        {/* Dynamic Glowing Ambient Light */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-brand-gold/5 blur-[120px] rounded-full pointer-events-none z-10" />
+        {heroColumns.map((col, index) => {
+          const isHovered = hoveredIndex === index;
+          const isAnyHovered = hoveredIndex !== null;
 
-        {/* Content Container (Two columns on desktop) */}
-        <div className="relative z-20 w-full max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-8 items-center pt-8 sm:pt-16 lg:pt-0">
-          
-          {/* Left Column: Brand Statement & Shop CTAs */}
-          <div className="lg:col-span-7 flex flex-col items-start text-left gap-6">
-            {/* Tagline */}
+          return (
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.8 }}
-              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm text-[9px] uppercase tracking-[0.25em] text-brand-silver"
+              key={index}
+              onMouseEnter={() => setHoveredIndex(index)}
+              onMouseLeave={() => setHoveredIndex(null)}
+              onClick={() => setHoveredIndex(hoveredIndex === index ? null : index)}
+              className="relative flex-grow flex items-center justify-center overflow-hidden border-b lg:border-b-0 lg:border-r border-white/5 last:border-0 cursor-pointer group"
+              animate={{
+                flexGrow: isHovered ? 2.2 : isAnyHovered ? 0.75 : 1,
+                height: isMobile
+                  ? (isHovered ? '45vh' : isAnyHovered ? '27.5vh' : '33.33vh')
+                  : '100%'
+              }}
+              transition={{
+                duration: 0.6,
+                ease: [0.16, 1, 0.3, 1] as any
+              }}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-brand-gold animate-pulse" />
-              <span>Boutique Digital & Concierge de Importados</span>
-            </motion.div>
-
-            {/* Headline */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.15 }}
-              className="flex flex-col gap-1 mt-2"
-            >
-              <span className="text-brand-white font-sans font-light text-xs sm:text-sm tracking-[0.4em] uppercase text-brand-silver/80">
-                VISÃO IMPORTADOS
-              </span>
-              <h1 className="font-sans text-4xl sm:text-5xl lg:text-6xl tracking-tight text-white uppercase leading-[1.1] font-light">
-                A sua boutique de <br />
-                <span className="font-title text-5xl sm:text-6xl lg:text-7xl text-gold-gradient tracking-wide block mt-2">
-                  IMPORTADOS
-                </span>
-              </h1>
-            </motion.div>
-
-            {/* Brief Description */}
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.8, delay: 0.3 }}
-              className="font-sans text-brand-silver/70 text-xs sm:text-sm tracking-wider max-w-xl leading-relaxed mt-2"
-            >
-              Explore nossa curadoria seleta de perfumes de alta costura, eletrônicos de última geração e gadgets exclusivos. Adquira peças autênticas direto do nosso estoque ou solicite importações sob demanda com assessoria personalizada.
-            </motion.p>
-
-            {/* Action Buttons */}
-            <motion.div
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.45 }}
-              className="flex flex-col sm:flex-row gap-4 items-center mt-6 w-full max-w-md"
-            >
-              <Link
-                href="/catalogo"
-                className="relative overflow-hidden group px-8 py-3.5 bg-gold-gradient text-black font-sans font-bold text-xs uppercase tracking-[0.15em] rounded hover:opacity-95 transition-all duration-300 w-full sm:w-1/2 text-center shadow-lg hover:shadow-brand-gold/20"
-              >
-                <div className="absolute inset-0 w-1/2 h-full bg-white/20 transform -skew-x-12 -translate-x-full group-hover:animate-shimmer pointer-events-none" />
-                Explorar Catálogo
-              </Link>
-              <Link
-                href="#cotacao"
-                onClick={(e) => {
-                  e.preventDefault()
-                  document.getElementById('cotacao')?.scrollIntoView({ behavior: 'smooth' })
-                }}
-                className="px-8 py-3.5 bg-transparent text-white border border-white/10 hover:border-brand-gold hover:text-brand-gold font-sans font-bold text-xs uppercase tracking-[0.15em] rounded transition-all duration-300 w-full sm:w-1/2 text-center backdrop-blur-sm hover:bg-brand-gold/5"
-              >
-                Solicitar Cotação
-              </Link>
-            </motion.div>
-
-            {/* Trust Badges */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.8, delay: 0.6 }}
-              className="flex items-center gap-6 mt-8 pt-8 border-t border-white/5 w-full overflow-x-auto no-scrollbar whitespace-nowrap"
-            >
-              <div className="flex items-center gap-2 shrink-0">
-                <Sparkles className="w-4 h-4 text-brand-gold" />
-                <span className="text-[10px] font-sans uppercase tracking-widest text-brand-silver">100% Original</span>
-              </div>
-              <div className="w-px h-4 bg-white/10 shrink-0" />
-              <div className="flex items-center gap-2 shrink-0">
-                <ShieldCheck className="w-4 h-4 text-brand-gold" />
-                <span className="text-[10px] font-sans uppercase tracking-widest text-brand-silver">Envio Segurado</span>
-              </div>
-              <div className="w-px h-4 bg-white/10 shrink-0" />
-              <div className="flex items-center gap-2 shrink-0">
-                <UserCheck className="w-4 h-4 text-brand-gold" />
-                <span className="text-[10px] font-sans uppercase tracking-widest text-brand-silver">Atendimento Vip</span>
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Right Column: E-commerce Product Showcase Card */}
-          <div className="lg:col-span-5 w-full flex justify-center lg:justify-end">
-            {heroProducts.length > 0 && (
+              {/* Image Background */}
               <motion.div
-                initial={{ opacity: 0, x: 30 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.8, delay: 0.2 }}
-                className="relative w-full max-w-[360px] sm:max-w-[380px] aspect-[4/5] mx-auto lg:mx-0"
+                className="absolute inset-0 z-0"
+                animate={{
+                  scale: isHovered ? 1.05 : 1,
+                  filter: isHovered 
+                    ? 'brightness(0.45) contrast(1.05)' 
+                    : isAnyHovered 
+                      ? 'brightness(0.15) blur(2px)' 
+                      : 'brightness(0.25)'
+                }}
+                transition={{ duration: 0.6 }}
               >
-              {/* Soft ambient lighting glow behind the card */}
-              <div className="absolute inset-0 bg-brand-gold/10 blur-[80px] rounded-full pointer-events-none -z-10" />
-              
-              {/* Product Card Box */}
-              <div className="relative w-full h-full bg-neutral-950/40 border border-white/5 rounded-2xl p-6 backdrop-blur-md flex flex-col justify-between shadow-2xl overflow-hidden group/card gold-glow">
-                {/* Internal subtle grid overlay */}
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff01_1px,transparent_1px),linear-gradient(to_bottom,#ffffff01_1px,transparent_1px)] bg-[size:3rem_3rem] pointer-events-none" />
-                
-                <AnimatePresence mode="wait">
+                <Image
+                  src={col.bgImage}
+                  alt={col.title}
+                  fill
+                  priority
+                  className="object-cover pointer-events-none select-none"
+                />
+              </motion.div>
+
+              {/* Dark Gradient bottom overlay for text readability */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-10 pointer-events-none" />
+
+              {/* Glowing Ambient light behind text when hovered */}
+              <AnimatePresence>
+                {isHovered && (
                   <motion.div
-                    key={activeHeroIndex}
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -15 }}
-                    transition={{ duration: 0.4 }}
-                    className="h-full flex flex-col justify-between"
-                  >
-                    {/* Card Top Details */}
-                    <div className="flex items-center justify-between w-full z-10">
-                      <span className="text-[9px] font-sans font-bold uppercase tracking-widest px-2.5 py-1 bg-white/5 border border-white/10 text-brand-gold rounded">
-                        {heroProducts[activeHeroIndex].category_name}
-                      </span>
-                      {renderStatusBadge(heroProducts[activeHeroIndex].status)}
-                    </div>
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 0.15 }}
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0 bg-brand-gold blur-[120px] pointer-events-none z-10"
+                  />
+                )}
+              </AnimatePresence>
 
-                    {/* Dynamic Image Canvas */}
-                    <Link 
-                      href={`/produto/${heroProducts[activeHeroIndex].slug}`}
-                      className="relative w-full flex-grow my-4 flex items-center justify-center overflow-hidden rounded-lg cursor-pointer"
+              {/* Column Content */}
+              <div className="relative z-20 w-full max-w-md mx-auto px-8 flex flex-col items-center text-center gap-3">
+                
+                {/* Subtitle / Tagline */}
+                <span className="text-brand-gold text-[9px] font-sans font-bold tracking-[0.25em] uppercase">
+                  {col.subtitle}
+                </span>
+
+                {/* Title */}
+                <h2 className="font-title text-2xl sm:text-3xl lg:text-4xl text-white uppercase tracking-wider transition-colors duration-300 group-hover:text-brand-gold">
+                  {col.title}
+                </h2>
+
+                {/* Separator line */}
+                <motion.div 
+                  className="h-0.5 bg-brand-gold"
+                  animate={{ width: isHovered ? '80px' : '40px' }}
+                  transition={{ duration: 0.4 }}
+                />
+
+                {/* Description and CTA button (fade-in and slide up on hover) */}
+                <div className="overflow-hidden w-full flex flex-col items-center">
+                  <motion.div
+                    initial={{ opacity: 0, height: 0, y: 20 }}
+                    animate={{
+                      opacity: isHovered ? 1 : 0,
+                      height: isHovered ? 'auto' : 0,
+                      y: isHovered ? 0 : 20
+                    }}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
+                    className="flex flex-col items-center gap-6"
+                  >
+                    <p className="font-sans text-xs text-brand-silver/90 leading-relaxed max-w-xs mt-2">
+                      {col.description}
+                    </p>
+
+                    <Link
+                      href={col.link}
+                      onClick={(e) => {
+                        if (col.link.startsWith('#')) {
+                          e.preventDefault();
+                          const target = document.getElementById(col.link.substring(1));
+                          if (target) {
+                            target.scrollIntoView({ behavior: 'smooth' });
+                          }
+                        }
+                      }}
+                      className="relative overflow-hidden group/btn px-6 py-3 bg-gold-gradient text-black font-sans font-extrabold text-[10px] uppercase tracking-[0.15em] rounded hover:opacity-95 transition-all duration-300 shadow-lg shadow-brand-gold/10 hover:shadow-brand-gold/25"
                     >
-                      <div className="relative w-[80%] h-[80%] aspect-square transition-transform duration-700 group-hover/card:scale-105">
-                        <Image
-                          src={heroProducts[activeHeroIndex].image_url}
-                          alt={heroProducts[activeHeroIndex].name}
-                          fill
-                          className="object-contain filter drop-shadow-[0_15px_30px_rgba(0,0,0,0.85)]"
-                          priority
-                        />
-                      </div>
+                      <div className="absolute inset-0 w-[30px] h-full bg-white/25 transform -skew-x-12 -translate-x-full animate-shimmer-continuous pointer-events-none" />
+                      {col.buttonText}
                     </Link>
-
-                    {/* Card Bottom Details */}
-                    <div className="z-10 pt-4 border-t border-white/5">
-                      <Link href={`/produto/${heroProducts[activeHeroIndex].slug}`}>
-                        <h3 className="font-title text-sm text-white tracking-wide uppercase line-clamp-1 mb-1 hover:text-brand-gold transition-colors duration-300 cursor-pointer">
-                          {heroProducts[activeHeroIndex].name}
-                        </h3>
-                      </Link>
-                      <p className="font-sans text-[10px] text-brand-silver/60 line-clamp-1 mb-4">
-                        {heroProducts[activeHeroIndex].description}
-                      </p>
-
-                      <div className="flex items-center justify-between pt-2">
-                        <div className="flex flex-col">
-                          <span className="text-[8px] font-sans text-brand-silver uppercase tracking-widest">Valor do Item</span>
-                          <span className="text-sm font-sans font-bold text-white">
-                            {heroProducts[activeHeroIndex].sale_price ? formatPrice(heroProducts[activeHeroIndex].sale_price!) : formatPrice(heroProducts[activeHeroIndex].price)}
-                          </span>
-                        </div>
-                        
-                        <button
-                          onClick={() => {
-                            addToCart({
-                              id: heroProducts[activeHeroIndex].id,
-                              name: heroProducts[activeHeroIndex].name,
-                              slug: heroProducts[activeHeroIndex].slug,
-                              price: heroProducts[activeHeroIndex].price,
-                              sale_price: heroProducts[activeHeroIndex].sale_price,
-                              image_url: heroProducts[activeHeroIndex].image_url,
-                              status: heroProducts[activeHeroIndex].status
-                            })
-                          }}
-                          className="px-4 py-2 bg-white/5 hover:bg-brand-gold border border-white/10 hover:border-brand-gold text-white hover:text-black font-sans font-bold text-[9px] uppercase tracking-widest rounded transition-all duration-300 flex items-center gap-1.5 shadow"
-                        >
-                          Comprar <ShoppingBag className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
                   </motion.div>
-                </AnimatePresence>
-              </div>
-
-              {/* Slider Dots */}
-              <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2">
-                {heroProducts.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setActiveHeroIndex(index)}
-                    className="group py-2 focus:outline-none"
-                    aria-label={`Visualizar produto ${index + 1}`}
-                  >
-                    <div className={`h-1.5 rounded-full transition-all duration-300 ${
-                      activeHeroIndex === index ? 'w-6 bg-brand-gold' : 'w-1.5 bg-white/20 hover:bg-white/40'
-                    }`} />
-                  </button>
-                ))}
+                </div>
               </div>
             </motion.div>
-            )}
-          </div>
-
-        </div>
+          );
+        })}
 
         {/* Scroll Down Indicator */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 text-brand-silver/40 z-20 select-none">
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 text-brand-silver/30 z-30 select-none pointer-events-none">
           <span className="text-[7px] font-sans uppercase tracking-[0.3em]">Role para navegar</span>
-          <div className="w-1.5 h-6 border border-white/10 rounded-full flex justify-center p-0.5">
+          <div className="w-1.5 h-6 border border-white/5 rounded-full flex justify-center p-0.5">
             <motion.div 
               animate={{ y: [0, 8, 0] }}
               transition={{ repeat: Infinity, duration: 1.5 }}
-              className="w-1 h-1 bg-brand-gold rounded-full"
+              className="w-1.5 h-1.5 bg-brand-gold/55 rounded-full"
             />
           </div>
         </div>

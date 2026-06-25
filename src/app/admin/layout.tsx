@@ -13,7 +13,8 @@ import {
   Globe, 
   Menu, 
   X, 
-  ShieldCheck 
+  ShieldCheck,
+  ArrowRightLeft
 } from 'lucide-react'
 
 export default function AdminLayout({
@@ -45,6 +46,7 @@ export default function AdminLayout({
     { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/admin/produtos', label: 'Produtos', icon: Package },
     { href: '/admin/categorias', label: 'Categorias', icon: Tag },
+    { href: '/admin/movimentacoes', label: 'Movimentações', icon: ArrowRightLeft },
   ]
 
   const isLinkActive = (href: string) => {

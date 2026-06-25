@@ -27,6 +27,7 @@ interface Product {
   display_order: number
   category_name: string
   image_url: string | null
+  stock_quantity: number
 }
 
 interface Category {
@@ -63,7 +64,7 @@ export default function AdminProdutosPage() {
       const { data: dbProds } = await supabase
         .from('products')
         .select(`
-          id, name, slug, price, sale_price, status, featured, display_order,
+          id, name, slug, price, sale_price, status, featured, display_order, stock_quantity,
           categories(name),
           product_images(image_url)
         `)
@@ -84,7 +85,8 @@ export default function AdminProdutosPage() {
             featured: p.featured,
             display_order: p.display_order,
             category_name: p.categories?.name || 'Sem Categoria',
-            image_url: imgUrl
+            image_url: imgUrl,
+            stock_quantity: p.stock_quantity || 0
           }
         })
         setProducts(formatted)
@@ -238,6 +240,7 @@ export default function AdminProdutosPage() {
                   <th className="py-4">Categoria</th>
                   <th className="py-4">Preço Base</th>
                   <th className="py-4">Preço Promocional</th>
+                  <th className="py-4">Estoque</th>
                   <th className="py-4">Ordem</th>
                   <th className="py-4">Status</th>
                   <th className="py-4">Destaque</th>
@@ -277,6 +280,11 @@ export default function AdminProdutosPage() {
                     {/* Sale Price */}
                     <td className="py-4 text-brand-gold-light font-bold">
                       {p.sale_price ? formatPrice(p.sale_price) : '-'}
+                    </td>
+
+                    {/* Stock quantity */}
+                    <td className="py-4 font-mono font-bold text-white">
+                      {p.stock_quantity} un
                     </td>
 
                     {/* Display Order */}

@@ -40,6 +40,7 @@ export default function AdminEditarProdutoPage({ params }: PageProps) {
   const [status, setStatus] = useState<'in_stock' | 'pre_order' | 'on_request'>('in_stock')
   const [featured, setFeatured] = useState(false)
   const [displayOrder, setDisplayOrder] = useState('0')
+  const [stockQuantity, setStockQuantity] = useState(0)
 
   // Image states
   const [existingImages, setExistingImages] = useState<ProductImage[]>([])
@@ -81,6 +82,7 @@ export default function AdminEditarProdutoPage({ params }: PageProps) {
         setFeatured(prod.featured)
         setDisplayOrder(String(prod.display_order))
         setExistingImages(prod.product_images || [])
+        setStockQuantity(prod.stock_quantity || 0)
 
       } catch (err) {
         console.error('Error loading product form data:', err)
@@ -333,6 +335,21 @@ export default function AdminEditarProdutoPage({ params }: PageProps) {
                 <option value="pre_order">Sob Encomenda</option>
                 <option value="on_request">Importação sob Consulta</option>
               </select>
+            </div>
+          </div>
+
+          {/* STOCK INFO (READ ONLY) */}
+          <div className="bg-white/5 border border-white/5 rounded p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h4 className="text-[10px] font-sans text-brand-gold uppercase tracking-widest font-bold">Estoque Atual</h4>
+                <p className="text-xs font-sans text-brand-silver mt-1">
+                  Este produto possui <strong className="text-white font-mono">{stockQuantity}</strong> unidades registradas em estoque.
+                </p>
+              </div>
+              <span className="text-[10px] font-sans text-brand-silver bg-black border border-white/10 px-3 py-1.5 rounded uppercase tracking-wider text-center sm:text-left">
+                Ajustável via aba "Movimentações"
+              </span>
             </div>
           </div>
 

@@ -168,3 +168,34 @@
 .group:hover .group-hover\:animate-shimmer {
   animation: shimmer 1.5s infinite;
 }
+
+@keyframes continuous-shimmer {
+  0% {
+    transform: translateX(-150%) skewX(-12deg);
+  }
+  30% {
+    transform: translateX(200%) skewX(-12deg);
+  }
+  100% {
+    transform: translateX(200%) skewX(-12deg);
+  }
+}
+
+.animate-shimmer-continuous {
+  animation: continuous-shimmer 4s ease-in-out infinite;
+}
+
+@keyframes pulse-subtle {
+  0%, 100% {
+    opacity: 1;
+    filter: drop-shadow(0 2px 20px rgba(212, 175, 55, 0.25));
+  }
+  50% {
+    opacity: 0.95;
+    filter: drop-shadow(0 2px 30px rgba(212, 175, 55, 0.45));
+  }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 4s ease-in-out infinite;
+}

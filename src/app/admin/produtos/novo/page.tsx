@@ -30,6 +30,8 @@ export default function AdminNovoProdutoPage() {
   const [status, setStatus] = useState<'in_stock' | 'pre_order' | 'on_request'>('in_stock')
   const [featured, setFeatured] = useState(false)
   const [displayOrder, setDisplayOrder] = useState('0')
+  const [initialStock, setInitialStock] = useState('')
+  const [initialCost, setInitialCost] = useState('')
 
   // Drag and drop / file states
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
@@ -153,6 +155,26 @@ export default function AdminNovoProdutoPage() {
       }
 
       const newProduct = productData[0]
+
+      // 1.5. Se houver estoque inicial, registrar movimentação de entrada
+      const parsedStock = parseInt(initialStock) || 0
+      if (parsedStock > 0) {
+        const parsedCost = parseFloat(initialCost) || 0
+        const { error: movementError } = await supabase
+          .from('product_movements')
+          .insert([{
+            product_id: newProduct.id,
+            type: 'entrada',
+            quantity: parsedStock,
+            cost_price: parsedCost > 0 ? parsedCost : null,
+            movement_date: new Date().toISOString(),
+            payment_status: 'pago'
+          }])
+
+        if (movementError) {
+          console.error('Error inserting initial stock movement:', movementError)
+        }
+      }
 
       // 2. Upload images to Supabase Storage if any
       if (selectedFiles.length > 0) {
@@ -288,6 +310,34 @@ export default function AdminNovoProdutoPage() {
                 <option value="pre_order">Sob Encomenda</option>
                 <option value="on_request">Importação sob Consulta</option>
               </select>
+            </div>
+          </div>
+
+          {/* ESTOQUE INICIAL E CUSTO INICIAL */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-[10px] font-sans text-brand-gold uppercase tracking-widest mb-2">Estoque Inicial (Opcional)</label>
+              <input
+                type="number"
+                min="0"
+                value={initialStock}
+                onChange={(e) => setInitialStock(e.target.value)}
+                placeholder="Ex: 10"
+                className="w-full bg-black border border-white/10 rounded px-4 py-3 text-xs font-sans focus:outline-none focus:border-brand-gold text-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-sans text-brand-gold uppercase tracking-widest mb-2">Preço de Custo Unitário Inicial (R$ - Opcional)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={initialCost}
+                onChange={(e) => setInitialCost(e.target.value)}
+                placeholder="Ex: 50.00"
+                className="w-full bg-black border border-white/10 rounded px-4 py-3 text-xs font-sans focus:outline-none focus:border-brand-gold text-white"
+              />
             </div>
           </div>
 
