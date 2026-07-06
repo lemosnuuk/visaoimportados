@@ -23,6 +23,7 @@ export default function AdminNovoProdutoPage() {
   const [submitLoading, setSubmitLoading] = useState(false)
 
   const [name, setName] = useState('')
+  const [brand, setBrand] = useState('')
   const [categoryId, setCategoryId] = useState('')
   const [price, setPrice] = useState('')
   const [salePrice, setSalePrice] = useState('')
@@ -138,6 +139,7 @@ export default function AdminNovoProdutoPage() {
         .insert([{
           name,
           slug,
+          brand: brand || null,
           category_id: categoryId,
           price: parseFloat(price),
           sale_price: salePrice ? parseFloat(salePrice) : null,
@@ -241,7 +243,7 @@ export default function AdminNovoProdutoPage() {
       ) : (
         <form onSubmit={handleSubmit} className="space-y-8 bg-brand-black border border-white/5 rounded-lg p-8">
           {/* GENERAL INFO ROW */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <label className="block text-[10px] font-sans text-brand-gold uppercase tracking-widest mb-2">Nome do Produto *</label>
               <input
@@ -250,6 +252,17 @@ export default function AdminNovoProdutoPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Ex: Bleu de Chanel Parfum 100ml"
+                className="w-full bg-black border border-white/10 rounded px-4 py-3 text-xs font-sans focus:outline-none focus:border-brand-gold text-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-sans text-brand-gold uppercase tracking-widest mb-2">Marca (Opcional)</label>
+              <input
+                type="text"
+                value={brand}
+                onChange={(e) => setBrand(e.target.value)}
+                placeholder="Ex: Chanel, Apple, JBL"
                 className="w-full bg-black border border-white/10 rounded px-4 py-3 text-xs font-sans focus:outline-none focus:border-brand-gold text-white"
               />
             </div>

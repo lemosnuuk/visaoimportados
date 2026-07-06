@@ -19,6 +19,7 @@ import {
 interface Product {
   id: string
   name: string
+  brand: string | null
   slug: string
   price: number
   sale_price: number | null
@@ -64,7 +65,7 @@ export default function AdminProdutosPage() {
       const { data: dbProds } = await supabase
         .from('products')
         .select(`
-          id, name, slug, price, sale_price, status, featured, display_order, stock_quantity,
+          id, name, brand, slug, price, sale_price, status, featured, display_order, stock_quantity,
           categories(name),
           product_images(image_url)
         `)
@@ -78,6 +79,7 @@ export default function AdminProdutosPage() {
           return {
             id: p.id,
             name: p.name,
+            brand: p.brand || null,
             slug: p.slug,
             price: Number(p.price),
             sale_price: p.sale_price ? Number(p.sale_price) : null,
@@ -151,7 +153,8 @@ export default function AdminProdutosPage() {
 
   // Filter products locally for instant response
   const filteredProducts = products.filter((p) => {
-    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (p.brand && p.brand.toLowerCase().includes(searchTerm.toLowerCase()))
     const matchesCategory = selectedCategory === 'all' || p.category_name === selectedCategory
     return matchesSearch && matchesCategory
   })
@@ -268,6 +271,7 @@ export default function AdminProdutosPage() {
 
                     {/* Name */}
                     <td className="py-4 font-semibold text-white max-w-sm truncate pr-4">
+                      {p.brand && <span className="block text-[10px] font-normal text-brand-gold uppercase tracking-wider mb-0.5">{p.brand}</span>}
                       {p.name}
                     </td>
 

@@ -12,6 +12,7 @@ import { ShoppingBag, ArrowLeft, Send, Check } from 'lucide-react'
 interface Product {
   id: string
   name: string
+  brand?: string | null
   slug: string
   description: string
   price: number
@@ -40,7 +41,7 @@ export default function ProductClientPage({ product }: { product: Product }) {
         let query = supabase
           .from('products')
           .select(`
-            id, name, slug, description, price, sale_price, status,
+            id, name, brand, slug, description, price, sale_price, status,
             categories(name, slug),
             product_images(image_url)
           `)
@@ -61,6 +62,7 @@ export default function ProductClientPage({ product }: { product: Product }) {
             return {
               id: p.id,
               name: p.name,
+              brand: p.brand || null,
               slug: p.slug,
               description: p.description || '',
               price: Number(p.price),
@@ -218,7 +220,7 @@ export default function ProductClientPage({ product }: { product: Product }) {
               {/* Category & Status */}
               <div className="flex items-center justify-between gap-4 mb-4">
                 <span className="text-xs font-sans text-brand-gold uppercase tracking-widest font-bold">
-                  {product.category_name}
+                  {product.category_name} {product.brand && `• ${product.brand}`}
                 </span>
                 {renderStatusBadge(product.status)}
               </div>
@@ -306,27 +308,56 @@ export default function ProductClientPage({ product }: { product: Product }) {
                 {relatedProducts.map((p) => (
                   <div
                     key={p.id}
-                    className="bg-brand-black border border-white/5 hover:border-white/10 rounded overflow-hidden flex flex-col group transition-all duration-300"
+                    className="bg-brand-black border border-white/5 hover:border-brand-gold/30 rounded-lg overflow-hidden flex flex-col group transition-all duration-500 hover:shadow-[0_8px_30px_rgba(212,175,55,0.06)] hover:-translate-y-0.5"
                   >
                     <Link href={`/produto/${p.slug}`} className="relative h-64 overflow-hidden block">
                       <Image
                         src={p.image_url}
                         alt={p.name}
                         fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-700"
+                        className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
                       />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                     </Link>
 
-                    <div className="p-4 flex flex-col flex-grow">
-                      <span className="text-[9px] font-sans text-brand-gold uppercase tracking-widest mb-1">{p.category_name}</span>
+                    <div className="p-5 flex flex-col flex-grow bg-gradient-to-b from-brand-black to-black/90">
+                      <span className="text-[9px] font-sans text-brand-gold uppercase tracking-widest mb-1.5 font-bold">
+                        {p.category_name} {p.brand && `• ${p.brand}`}
+                      </span>
                       <Link href={`/produto/${p.slug}`}>
-                        <h3 className="font-title text-[11px] text-white mb-2 uppercase tracking-wide group-hover:text-brand-gold transition-colors duration-300 line-clamp-2 min-h-6">
+                        <h3 className="font-title text-[11px] text-white mb-3 uppercase tracking-wide group-hover:text-brand-gold transition-colors duration-300 line-clamp-2 min-h-6 font-bold leading-tight">
                           {p.name}
                         </h3>
                       </Link>
-                      <span className="text-xs font-sans font-bold text-white mt-auto block">
-                        {p.status === 'on_request' ? 'Sob Consulta' : formatPrice(p.sale_price ?? p.price)}
-                      </span>
+                      <div className="mt-auto pt-3 border-t border-white/5">
+                        {p.sale_price ? (
+                          <div className="flex flex-col">
+                            <span className="text-[9px] font-sans text-brand-silver line-through leading-none">
+                              {formatPrice(p.price)}
+                            </span>
+                            <span className="text-base font-title font-black text-brand-gold-light tracking-tight mt-0.5">
+                              {formatPrice(p.sale_price)}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col">
+                            {p.status === 'on_request' ? (
+                              <span className="text-[10px] font-title font-bold text-brand-silver uppercase tracking-widest block py-0.5">
+                                Sob Consulta
+                              </span>
+                            ) : (
+                              <>
+                                <span className="text-[8px] font-sans text-brand-silver uppercase tracking-widest leading-none mb-0.5">
+                                  Valor
+                                </span>
+                                <span className="text-base font-title font-black text-white tracking-tight">
+                                  {formatPrice(p.price)}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}

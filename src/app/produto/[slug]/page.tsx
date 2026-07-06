@@ -17,7 +17,7 @@ async function getProduct(slug: string) {
     const { data: product, error } = await supabase
       .from('products')
       .select(`
-        id, name, slug, description, price, sale_price, status, featured, display_order, category_id,
+        id, name, brand, slug, description, price, sale_price, status, featured, display_order, category_id,
         categories(id, name, slug),
         product_images(image_url)
       `)
@@ -35,6 +35,7 @@ async function getProduct(slug: string) {
     return {
       id: product.id,
       name: product.name,
+      brand: product.brand || null,
       slug: product.slug,
       description: product.description || '',
       price: Number(product.price),

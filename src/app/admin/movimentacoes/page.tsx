@@ -15,13 +15,22 @@ import {
   ArrowRightLeft,
   ChevronDown,
   Info,
-  DollarSign
+  DollarSign,
+  BarChart3,
+  Printer,
+  CalendarRange,
+  Download,
+  Users,
+  FileText
 } from 'lucide-react'
 
 interface Product {
   id: string
   name: string
   price: number
+  stock_quantity?: number
+  brand?: string | null
+  categories?: { name: string } | { name: string }[] | null
 }
 
 interface Movement {
@@ -60,6 +69,13 @@ export default function AdminMovimentacoesPage() {
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false)
+
+  // Reports Panel States
+  const [isReportsModalOpen, setIsReportsModalOpen] = useState(false)
+  const [reportType, setReportType] = useState<'estoque' | 'vendas' | 'lucro' | 'clientes' | 'produto_especifico'>('estoque')
+  const [reportStartDate, setReportStartDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().substring(0, 10))
+  const [reportEndDate, setReportEndDate] = useState(new Date().toISOString().substring(0, 10))
+  const [reportProductId, setReportProductId] = useState('')
   
   // New Movement Form States
   const [productId, setProductId] = useState('')
@@ -129,13 +145,19 @@ export default function AdminMovimentacoesPage() {
       // 2. Fetch products for dropdown selection
       const { data: dbProducts, error: pErr } = await supabase
         .from('products')
-        .select('id, name, price')
+        .select(`
+          id, name, price, stock_quantity, brand,
+          categories(name)
+        `)
         .order('name')
 
       if (pErr) throw pErr
       if (dbProducts) {
         setProducts(dbProducts)
-        if (dbProducts.length > 0) setProductId(dbProducts[0].id)
+        if (dbProducts.length > 0) {
+          setProductId(dbProducts[0].id)
+          setReportProductId(dbProducts[0].id)
+        }
       }
     } catch (err) {
       console.error('Error loading movements initial data:', err)
@@ -212,10 +234,21 @@ export default function AdminMovimentacoesPage() {
       return
     }
 
+    const qty = parseInt(quantity)
+
+    // Bloquear saída de produtos caso não haja estoque suficiente
+    if (type === 'saida') {
+      const selectedProd = products.find(p => p.id === productId)
+      const currentStock = selectedProd?.stock_quantity || 0
+      if (qty > currentStock) {
+        alert(`Erro: Estoque insuficiente. O produto "${selectedProd?.name}" possui apenas ${currentStock} unidades em estoque, mas você tentou registrar a saída de ${qty} unidades.`)
+        return
+      }
+    }
+
     setSubmitLoading(true)
 
     try {
-      const qty = parseInt(quantity)
       const cost = parseFloat(costPrice) || 0
       const sale = parseFloat(salePrice) || 0
       const totalInst = parseInt(installmentsTotal) || 1
@@ -360,6 +393,407 @@ export default function AdminMovimentacoesPage() {
       return new Date(b.movement_date).getTime() - new Date(a.movement_date).getTime()
     })
 
+  // active report helper calculations and rendering
+  const renderActiveReport = () => {
+    const startDateTime = new Date(reportStartDate + 'T00:00:00').getTime()
+    const endDateTime = new Date(reportEndDate + 'T23:59:59').getTime()
+
+    const reportMovements = movements.filter((m) => {
+      const time = new Date(m.movement_date).getTime()
+      return time >= startDateTime && time <= endDateTime
+    })
+
+    if (reportType === 'estoque') {
+      const totalCatalog = products.length
+      const totalStockItems = products.reduce((acc, p) => acc + (p.stock_quantity || 0), 0)
+      const totalValuation = products.reduce((acc, p) => acc + ((p.stock_quantity || 0) * p.price), 0)
+
+      return (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-white/[0.02] border border-white/5 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
+              <span className="text-[9px] font-sans text-brand-gold uppercase tracking-widest print:text-neutral-500">Total de Itens Cadastrados</span>
+              <span className="text-2xl font-title text-white font-bold mt-2 print:text-black">{totalCatalog}</span>
+            </div>
+            <div className="bg-white/[0.02] border border-white/5 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
+              <span className="text-[9px] font-sans text-brand-gold uppercase tracking-widest print:text-neutral-500">Unidades Físicas em Estoque</span>
+              <span className="text-2xl font-title text-white font-bold mt-2 print:text-black">{totalStockItems} un</span>
+            </div>
+            <div className="bg-white/[0.02] border border-white/5 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
+              <span className="text-[9px] font-sans text-brand-gold uppercase tracking-widest print:text-neutral-500">Valor Estimado do Inventário (Venda)</span>
+              <span className="text-2xl font-title text-brand-gold-light font-bold mt-2 print:text-black">{formatPrice(totalValuation)}</span>
+            </div>
+          </div>
+
+          <div className="bg-black/35 border border-white/5 rounded-lg overflow-hidden print:border-neutral-200">
+            <table className="w-full text-left border-collapse text-xs print:text-black">
+              <thead>
+                <tr className="border-b border-white/5 bg-white/[0.02] text-[10px] font-sans text-brand-silver uppercase tracking-wider print:border-neutral-200 print:text-neutral-600">
+                  <th className="p-4">Marca</th>
+                  <th className="p-4">Produto</th>
+                  <th className="p-4">Categoria</th>
+                  <th className="p-4 text-center">Estoque</th>
+                  <th className="p-4 text-right">Preço de Venda</th>
+                  <th className="p-4 text-right">Total Estimado</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5 print:divide-neutral-200">
+                {products.map((p) => {
+                  const stock = p.stock_quantity || 0
+                  const category = p.categories 
+                    ? (Array.isArray(p.categories) ? p.categories[0]?.name : p.categories.name) || 'Sem Categoria'
+                    : 'Sem Categoria'
+                  const total = stock * p.price
+                  return (
+                    <tr key={p.id} className="hover:bg-white/[0.01] print:hover:bg-transparent">
+                      <td className="p-4 font-mono font-bold text-brand-gold print:text-neutral-700">{p.brand || '-'}</td>
+                      <td className="p-4 text-white font-medium print:text-black">{p.name}</td>
+                      <td className="p-4 text-brand-silver print:text-neutral-500">{category}</td>
+                      <td className="p-4 text-center font-mono font-bold text-white print:text-black">{stock} un</td>
+                      <td className="p-4 text-right font-mono print:text-neutral-700">{formatPrice(p.price)}</td>
+                      <td className="p-4 text-right font-mono text-brand-gold-light font-semibold print:text-black">{formatPrice(total)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )
+    }
+
+    if (reportType === 'vendas') {
+      const salesMovements = reportMovements.filter((m) => m.type === 'saida')
+      const totalSales = salesMovements.length
+      const totalItemsSold = salesMovements.reduce((acc, m) => acc + m.quantity, 0)
+      const totalRevenue = salesMovements.reduce((acc, m) => acc + (m.quantity * (m.sale_price || 0)), 0)
+      const totalVista = salesMovements.filter(m => m.payment_type === 'vista').reduce((acc, m) => acc + (m.quantity * (m.sale_price || 0)), 0)
+      const totalParcelado = salesMovements.filter(m => m.payment_type === 'parcelado').reduce((acc, m) => acc + (m.quantity * (m.sale_price || 0)), 0)
+
+      return (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div className="bg-white/[0.02] border border-white/5 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
+              <span className="text-[9px] font-sans text-brand-gold uppercase tracking-widest print:text-neutral-500">Transações de Venda</span>
+              <span className="text-2xl font-title text-white font-bold mt-2 print:text-black">{totalSales}</span>
+            </div>
+            <div className="bg-white/[0.02] border border-white/5 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
+              <span className="text-[9px] font-sans text-brand-gold uppercase tracking-widest print:text-neutral-500">Unidades Vendidas</span>
+              <span className="text-2xl font-title text-white font-bold mt-2 print:text-black">{totalItemsSold} un</span>
+            </div>
+            <div className="bg-white/[0.02] border border-white/5 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
+              <span className="text-[9px] font-sans text-brand-gold uppercase tracking-widest print:text-neutral-500">Faturamento Bruto</span>
+              <span className="text-2xl font-title text-brand-gold-light font-bold mt-2 print:text-black">{formatPrice(totalRevenue)}</span>
+            </div>
+            <div className="bg-white/[0.02] border border-white/5 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
+              <span className="text-[9px] font-sans text-brand-gold uppercase tracking-widest print:text-neutral-500">À Vista / Parcelado</span>
+              <span className="text-xs text-white font-bold mt-3 print:text-black block">
+                V: {formatPrice(totalVista)} <br/>
+                P: {formatPrice(totalParcelado)}
+              </span>
+            </div>
+          </div>
+
+          <div className="bg-black/35 border border-white/5 rounded-lg overflow-hidden print:border-neutral-200">
+            <table className="w-full text-left border-collapse text-xs print:text-black">
+              <thead>
+                <tr className="border-b border-white/5 bg-white/[0.02] text-[10px] font-sans text-brand-silver uppercase tracking-wider print:border-neutral-200 print:text-neutral-600">
+                  <th className="p-4">Data</th>
+                  <th className="p-4">Produto</th>
+                  <th className="p-4 text-center">Qtd.</th>
+                  <th className="p-4 text-right">Preço Unit.</th>
+                  <th className="p-4 text-right">Total</th>
+                  <th className="p-4">Cliente</th>
+                  <th className="p-4">Método</th>
+                  <th className="p-4">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5 print:divide-neutral-200">
+                {salesMovements.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="p-8 text-center text-brand-silver print:text-black">Nenhuma venda registrada no período.</td>
+                  </tr>
+                ) : (
+                  salesMovements.map((m) => {
+                    const total = m.quantity * (m.sale_price || 0)
+                    return (
+                      <tr key={m.id} className="hover:bg-white/[0.01] print:hover:bg-transparent">
+                        <td className="p-4 font-mono text-brand-silver print:text-neutral-600">{new Date(m.movement_date).toLocaleDateString('pt-BR')}</td>
+                        <td className="p-4 text-white font-medium print:text-black">{m.products?.name || 'Produto Excluído'}</td>
+                        <td className="p-4 text-center font-mono print:text-black">{m.quantity} un</td>
+                        <td className="p-4 text-right font-mono print:text-neutral-600">{formatPrice(m.sale_price)}</td>
+                        <td className="p-4 text-right font-mono text-white font-semibold print:text-black">{formatPrice(total)}</td>
+                        <td className="p-4 text-brand-silver print:text-neutral-700">{m.customer_name || '-'}</td>
+                        <td className="p-4 text-brand-silver uppercase print:text-neutral-700 text-[10px]">{m.payment_type === 'vista' ? 'À Vista' : 'Parcelado'}</td>
+                        <td className="p-4 text-[10px] print:text-black">
+                          <span className={`font-bold uppercase ${m.payment_status === 'pago' ? 'text-green-400' : m.payment_status === 'parcialmente_pago' ? 'text-amber-400' : 'text-red-400'}`}>
+                            {m.payment_status}
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )
+    }
+
+    if (reportType === 'lucro') {
+      const salesMovements = reportMovements.filter((m) => m.type === 'saida')
+      const totalRevenue = salesMovements.reduce((acc, m) => acc + (m.quantity * (m.sale_price || 0)), 0)
+      const totalCost = salesMovements.reduce((acc, m) => acc + (m.quantity * (m.cost_price || (m.products?.price ? m.products.price * 0.6 : 0))), 0)
+      const netProfit = totalRevenue - totalCost
+      const profitMargin = totalCost > 0 ? (netProfit / totalCost) * 100 : 0
+
+      const productSummary: Record<string, { name: string, qty: number, totalCost: number, totalRevenue: number }> = {}
+      salesMovements.forEach((m) => {
+        const key = m.product_id
+        const cost = m.cost_price || (m.products?.price ? m.products.price * 0.6 : 0)
+        const sale = m.sale_price || 0
+        if (!productSummary[key]) {
+          productSummary[key] = {
+            name: m.products?.name || 'Produto Excluído',
+            qty: 0,
+            totalCost: 0,
+            totalRevenue: 0
+          }
+        }
+        productSummary[key].qty += m.quantity
+        productSummary[key].totalCost += m.quantity * cost
+        productSummary[key].totalRevenue += m.quantity * sale
+      })
+
+      return (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div className="bg-white/[0.02] border border-white/5 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
+              <span className="text-[9px] font-sans text-brand-gold uppercase tracking-widest print:text-neutral-500">Receita Bruta (Vendas)</span>
+              <span className="text-2xl font-title text-white font-bold mt-2 print:text-black">{formatPrice(totalRevenue)}</span>
+            </div>
+            <div className="bg-white/[0.02] border border-white/5 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
+              <span className="text-[9px] font-sans text-brand-gold uppercase tracking-widest print:text-neutral-500">CMV Acumulado</span>
+              <span className="text-2xl font-title text-brand-silver font-bold mt-2 print:text-black">{formatPrice(totalCost)}</span>
+            </div>
+            <div className="bg-white/[0.02] border border-white/5 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
+              <span className="text-[9px] font-sans text-brand-gold uppercase tracking-widest print:text-neutral-500">Lucro Líquido Real</span>
+              <span className="text-2xl font-title text-green-400 font-bold mt-2 print:text-black">{formatPrice(netProfit)}</span>
+            </div>
+            <div className="bg-white/[0.02] border border-white/5 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
+              <span className="text-[9px] font-sans text-brand-gold uppercase tracking-widest print:text-neutral-500">Margem Média Retorno</span>
+              <span className={`text-2xl font-title font-bold mt-2 print:text-black ${netProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {profitMargin.toFixed(1)}%
+              </span>
+            </div>
+          </div>
+
+          <div className="bg-black/35 border border-white/5 rounded-lg overflow-hidden print:border-neutral-200">
+            <table className="w-full text-left border-collapse text-xs print:text-black">
+              <thead>
+                <tr className="border-b border-white/5 bg-white/[0.02] text-[10px] font-sans text-brand-silver uppercase tracking-wider print:border-neutral-200 print:text-neutral-600">
+                  <th className="p-4">Produto</th>
+                  <th className="p-4 text-center">Qtd. Vendida</th>
+                  <th className="p-4 text-right">CMV Acumulado</th>
+                  <th className="p-4 text-right">Faturamento Acumulado</th>
+                  <th className="p-4 text-right">Lucro Líquido</th>
+                  <th className="p-4 text-right">Margem (%)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5 print:divide-neutral-200">
+                {Object.keys(productSummary).length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="p-8 text-center text-brand-silver print:text-black">Sem movimentações de lucro no período.</td>
+                  </tr>
+                ) : (
+                  Object.entries(productSummary).map(([key, data]) => {
+                    const profit = data.totalRevenue - data.totalCost
+                    const margin = data.totalCost > 0 ? (profit / data.totalCost) * 100 : 0
+                    return (
+                      <tr key={key} className="hover:bg-white/[0.01] print:hover:bg-transparent">
+                        <td className="p-4 text-white font-medium print:text-black">{data.name}</td>
+                        <td className="p-4 text-center font-mono print:text-black">{data.qty} un</td>
+                        <td className="p-4 text-right font-mono text-brand-silver print:text-neutral-500">{formatPrice(data.totalCost)}</td>
+                        <td className="p-4 text-right font-mono text-white print:text-black">{formatPrice(data.totalRevenue)}</td>
+                        <td className="p-4 text-right font-mono text-green-400 font-bold print:text-black">{formatPrice(profit)}</td>
+                        <td className="p-4 text-right font-mono font-bold text-white print:text-black">{margin.toFixed(1)}%</td>
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )
+    }
+
+    if (reportType === 'clientes') {
+      const salesMovements = reportMovements.filter((m) => m.type === 'saida')
+      
+      const customerMap: Record<string, { name: string, count: number, total: number, qty: number }> = {}
+      salesMovements.forEach((m) => {
+        const key = m.customer_name?.trim() || 'Cliente Não Identificado'
+        if (!customerMap[key]) {
+          customerMap[key] = {
+            name: key,
+            count: 0,
+            total: 0,
+            qty: 0
+          }
+        }
+        customerMap[key].count += 1
+        customerMap[key].total += m.quantity * (m.sale_price || 0)
+        customerMap[key].qty += m.quantity
+      })
+
+      const customerList = Object.values(customerMap).sort((a, b) => b.total - a.total)
+      const totalUniqueCustomers = customerList.length
+      const highestSpender = customerList.length > 0 ? customerList[0] : null
+
+      return (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-white/[0.02] border border-white/5 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
+              <span className="text-[9px] font-sans text-brand-gold uppercase tracking-widest print:text-neutral-500">Total de Clientes Atendidos no Período</span>
+              <span className="text-2xl font-title text-white font-bold mt-2 print:text-black">{totalUniqueCustomers} clientes</span>
+            </div>
+            <div className="bg-white/[0.02] border border-white/5 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
+              <span className="text-[9px] font-sans text-brand-gold uppercase tracking-widest print:text-neutral-500">Maior Comprador (Faturamento)</span>
+              <span className="text-base font-title text-white font-bold mt-2 print:text-black">
+                {highestSpender ? `${highestSpender.name} (${formatPrice(highestSpender.total)})` : '-'}
+              </span>
+            </div>
+          </div>
+
+          <div className="bg-black/35 border border-white/5 rounded-lg overflow-hidden print:border-neutral-200">
+            <table className="w-full text-left border-collapse text-xs print:text-black">
+              <thead>
+                <tr className="border-b border-white/5 bg-white/[0.02] text-[10px] font-sans text-brand-silver uppercase tracking-wider print:border-neutral-200 print:text-neutral-600">
+                  <th className="p-4">Cliente</th>
+                  <th className="p-4 text-center">Transações</th>
+                  <th className="p-4 text-center">Itens Comprados</th>
+                  <th className="p-4 text-right">Total Gasto</th>
+                  <th className="p-4 text-right">Ticket Médio</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5 print:divide-neutral-200">
+                {customerList.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="p-8 text-center text-brand-silver print:text-black">Sem compras registradas no período.</td>
+                  </tr>
+                ) : (
+                  customerList.map((c) => {
+                    const ticketMedium = c.count > 0 ? c.total / c.count : 0
+                    return (
+                      <tr key={c.name} className="hover:bg-white/[0.01] print:hover:bg-transparent">
+                        <td className="p-4 text-white font-medium print:text-black">{c.name}</td>
+                        <td className="p-4 text-center font-mono print:text-black">{c.count}</td>
+                        <td className="p-4 text-center font-mono print:text-black">{c.qty} un</td>
+                        <td className="p-4 text-right font-mono text-brand-gold-light font-bold print:text-black">{formatPrice(c.total)}</td>
+                        <td className="p-4 text-right font-mono print:text-black">{formatPrice(ticketMedium)}</td>
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )
+    }
+
+    if (reportType === 'produto_especifico') {
+      const selectedProd = products.find(p => p.id === reportProductId)
+      const productMovements = reportMovements.filter((m) => m.product_id === reportProductId)
+
+      const totalBought = productMovements.filter(m => m.type === 'entrada').reduce((acc, m) => acc + m.quantity, 0)
+      const totalCostBought = productMovements.filter(m => m.type === 'entrada').reduce((acc, m) => acc + (m.quantity * (m.cost_price || 0)), 0)
+      
+      const totalSold = productMovements.filter(m => m.type === 'saida').reduce((acc, m) => acc + m.quantity, 0)
+      const totalRevenueSold = productMovements.filter(m => m.type === 'saida').reduce((acc, m) => acc + (m.quantity * (m.sale_price || 0)), 0)
+      const totalCostSold = productMovements.filter(m => m.type === 'saida').reduce((acc, m) => acc + (m.quantity * (m.cost_price || 0)), 0)
+      const netProfit = totalRevenueSold - totalCostSold
+
+      return (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div className="bg-white/[0.02] border border-white/5 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
+              <span className="text-[9px] font-sans text-brand-gold uppercase tracking-widest print:text-neutral-500">Total Comprado (Período)</span>
+              <span className="text-xl font-title text-white font-bold mt-2 print:text-black">
+                {totalBought} un <span className="text-xs font-sans text-brand-silver font-normal">({formatPrice(totalCostBought)})</span>
+              </span>
+            </div>
+            <div className="bg-white/[0.02] border border-white/5 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
+              <span className="text-[9px] font-sans text-brand-gold uppercase tracking-widest print:text-neutral-500">Total Vendido (Período)</span>
+              <span className="text-xl font-title text-white font-bold mt-2 print:text-black">
+                {totalSold} un <span className="text-xs font-sans text-brand-silver font-normal">({formatPrice(totalRevenueSold)})</span>
+              </span>
+            </div>
+            <div className="bg-white/[0.02] border border-white/5 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
+              <span className="text-[9px] font-sans text-brand-gold uppercase tracking-widest print:text-neutral-500">Lucro Líquido (Período)</span>
+              <span className="text-2xl font-title text-green-400 font-bold mt-2 print:text-black">{formatPrice(netProfit)}</span>
+            </div>
+            <div className="bg-white/[0.02] border border-white/5 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
+              <span className="text-[9px] font-sans text-brand-gold uppercase tracking-widest print:text-neutral-500">Estoque Atual Físico</span>
+              <span className="text-2xl font-title text-white font-bold mt-2 print:text-black">
+                {selectedProd ? `${selectedProd.stock_quantity} un` : '-'}
+              </span>
+            </div>
+          </div>
+
+          <div className="bg-black/35 border border-white/5 rounded-lg overflow-hidden print:border-neutral-200">
+            <table className="w-full text-left border-collapse text-xs print:text-black">
+              <thead>
+                <tr className="border-b border-white/5 bg-white/[0.02] text-[10px] font-sans text-brand-silver uppercase tracking-wider print:border-neutral-200 print:text-neutral-600">
+                  <th className="p-4">Data</th>
+                  <th className="p-4">Tipo</th>
+                  <th className="p-4 text-center">Quantidade</th>
+                  <th className="p-4 text-right">Preço Custo</th>
+                  <th className="p-4 text-right">Preço Venda</th>
+                  <th className="p-4 text-right">Total Movimento</th>
+                  <th className="p-4">Detalhes/Notas</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5 print:divide-neutral-200">
+                {productMovements.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="p-8 text-center text-brand-silver print:text-neutral-500">Nenhuma movimentação para o produto selecionado.</td>
+                  </tr>
+                ) : (
+                  productMovements.map((m) => {
+                    const price = m.type === 'entrada' ? m.cost_price : m.sale_price
+                    const total = m.quantity * (price || 0)
+                    return (
+                      <tr key={m.id} className="hover:bg-white/[0.01] print:hover:bg-transparent">
+                        <td className="p-4 font-mono text-brand-silver print:text-neutral-600">{new Date(m.movement_date).toLocaleDateString('pt-BR')}</td>
+                        <td className="p-4 print:text-black">
+                          {m.type === 'entrada' ? (
+                            <span className="px-2 py-0.5 text-[8px] font-sans font-bold uppercase text-green-400 bg-green-950/45 border border-green-500/20 rounded">Compra</span>
+                          ) : (
+                            <span className="px-2 py-0.5 text-[8px] font-sans font-bold uppercase text-red-400 bg-red-950/45 border border-red-500/20 rounded">Venda</span>
+                          )}
+                        </td>
+                        <td className="p-4 text-center font-mono print:text-black">{m.quantity} un</td>
+                        <td className="p-4 text-right font-mono text-brand-silver print:text-neutral-600">{m.cost_price ? formatPrice(m.cost_price) : '-'}</td>
+                        <td className="p-4 text-right font-mono print:text-neutral-600">{m.sale_price ? formatPrice(m.sale_price) : '-'}</td>
+                        <td className="p-4 text-right font-mono text-white font-semibold print:text-black">{formatPrice(total)}</td>
+                        <td className="p-4 text-brand-silver print:text-neutral-700 max-w-xs truncate">{m.type === 'saida' ? (m.customer_name || 'Geral') : (m.notes || 'Entrada de estoque')}</td>
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )
+    }
+
+    return null
+  }
+
   // Format Helper
   const formatPrice = (price: number | null) => {
     if (price === null) return '-'
@@ -372,23 +806,33 @@ export default function AdminMovimentacoesPage() {
   return (
     <div className="space-y-12">
       {/* HEADER */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 print:hidden">
         <div>
           <h1 className="font-title text-2xl sm:text-3xl text-white uppercase tracking-wide">Movimentações</h1>
           <p className="font-sans text-xs text-brand-silver mt-1">Monitore compras, vendas, lucros e o fluxo de caixa do estoque</p>
         </div>
 
-        <button
-          onClick={handleOpenModal}
-          className="flex items-center gap-1.5 px-5 py-3 bg-brand-gold text-black font-sans text-xs font-bold uppercase tracking-wider rounded hover:opacity-90 transition-all duration-300"
-        >
-          <Plus className="w-4 h-4" />
-          Registrar Movimentação
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={() => setIsReportsModalOpen(true)}
+            className="flex items-center gap-1.5 px-5 py-3 border border-white/10 text-brand-silver hover:text-white hover:border-brand-gold font-sans text-xs font-bold uppercase tracking-wider rounded transition-all duration-300"
+          >
+            <BarChart3 className="w-4 h-4 text-brand-gold" />
+            Gerar Relatórios
+          </button>
+
+          <button
+            onClick={handleOpenModal}
+            className="flex items-center gap-1.5 px-5 py-3 bg-brand-gold text-black font-sans text-xs font-bold uppercase tracking-wider rounded hover:opacity-90 transition-all duration-300"
+          >
+            <Plus className="w-4 h-4" />
+            Registrar Movimentação
+          </button>
+        </div>
       </div>
 
       {/* FILTROS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-center print:hidden">
         {/* Search Produto */}
         <div className="relative">
           <Search className="w-4 h-4 text-brand-silver absolute left-4 top-1/2 -translate-y-1/2" />
@@ -447,16 +891,16 @@ export default function AdminMovimentacoesPage() {
 
       {/* TABELA */}
       {loading ? (
-        <div className="py-20 text-center">
+        <div className="py-20 text-center print:hidden">
           <Loader2 className="w-8 h-8 animate-spin text-brand-gold mx-auto" />
           <p className="text-xs font-sans text-brand-silver mt-3">Carregando livro caixa...</p>
         </div>
       ) : filteredAndSortedMovements.length === 0 ? (
-        <div className="p-12 text-center border border-dashed border-white/5 rounded">
+        <div className="p-12 text-center border border-dashed border-white/5 rounded print:hidden">
           <p className="text-xs font-sans text-brand-silver">Nenhuma movimentação registrada.</p>
         </div>
       ) : (
-        <div className="bg-brand-black border border-white/5 rounded-lg p-6">
+        <div className="bg-brand-black border border-white/5 rounded-lg p-6 print:hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -610,6 +1054,103 @@ export default function AdminMovimentacoesPage() {
         </div>
       )}
 
+      {/* MODAL RELATÓRIOS */}
+      {isReportsModalOpen && (
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center p-4 z-50 overflow-y-auto print:absolute print:inset-0 print:bg-white print:text-black print:p-0 print:backdrop-blur-none">
+          <div className="bg-brand-black border border-white/10 rounded-xl max-w-6xl w-full p-8 space-y-6 relative max-h-[90vh] overflow-y-auto print:border-none print:bg-white print:text-black print:max-h-none print:overflow-visible print:p-0 print:shadow-none">
+            {/* Close */}
+            <button
+              onClick={() => setIsReportsModalOpen(false)}
+              className="absolute top-6 right-6 p-1.5 border border-white/10 rounded text-brand-silver hover:text-white transition-colors print:hidden"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4 print:border-neutral-200">
+              <div>
+                <h3 className="font-title text-xl text-white uppercase tracking-wide flex items-center gap-2 print:text-black print:text-2xl">
+                  <BarChart3 className="w-5 h-5 text-brand-gold print:text-black" />
+                  Painel de Relatórios Analíticos
+                </h3>
+                <p className="font-sans text-[11px] text-brand-silver mt-1 print:text-neutral-500">
+                  {reportType === 'estoque' && 'Relatório de Posição de Estoque Físico e Financeiro'}
+                  {reportType === 'vendas' && `Relatório de Vendas de ${new Date(reportStartDate + 'T00:00:00').toLocaleDateString('pt-BR')} até ${new Date(reportEndDate + 'T00:00:00').toLocaleDateString('pt-BR')}`}
+                  {reportType === 'lucro' && `Demonstrativo de Resultado (CMV / Lucros) de ${new Date(reportStartDate + 'T00:00:00').toLocaleDateString('pt-BR')} até ${new Date(reportEndDate + 'T00:00:00').toLocaleDateString('pt-BR')}`}
+                  {reportType === 'clientes' && `Performance e Histórico de Clientes de ${new Date(reportStartDate + 'T00:00:00').toLocaleDateString('pt-BR')} até ${new Date(reportEndDate + 'T00:00:00').toLocaleDateString('pt-BR')}`}
+                  {reportType === 'produto_especifico' && `Histórico e Lucratividade do Produto de ${new Date(reportStartDate + 'T00:00:00').toLocaleDateString('pt-BR')} até ${new Date(reportEndDate + 'T00:00:00').toLocaleDateString('pt-BR')}`}
+                </p>
+              </div>
+
+              <button
+                onClick={() => window.print()}
+                className="flex items-center gap-1.5 px-4 py-2 bg-white/5 border border-white/10 hover:border-brand-gold text-white text-xs font-sans font-bold uppercase tracking-wider rounded transition-all duration-300 print:hidden"
+              >
+                <Printer className="w-4 h-4 text-brand-gold" />
+                Imprimir Relatório
+              </button>
+            </div>
+
+            {/* Filters Row */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-5 bg-black/40 border border-white/5 rounded-lg print:hidden">
+              <div className="flex flex-col gap-1">
+                <label className="text-[9px] font-sans text-brand-gold uppercase tracking-widest">Tipo de Relatório</label>
+                <select
+                  value={reportType}
+                  onChange={(e) => setReportType(e.target.value as any)}
+                  className="bg-brand-black border border-white/10 text-xs font-sans text-white rounded p-2.5 focus:outline-none focus:border-brand-gold cursor-pointer"
+                >
+                  <option value="estoque">Inventário de Estoque</option>
+                  <option value="vendas">Faturamento de Vendas</option>
+                  <option value="lucro">DRE / Lucratividade</option>
+                  <option value="clientes">Performance de Clientes</option>
+                  <option value="produto_especifico">Produto Específico</option>
+                </select>
+              </div>
+
+              <div className={`flex flex-col gap-1 ${reportType === 'estoque' ? 'opacity-40 pointer-events-none' : ''}`}>
+                <label className="text-[9px] font-sans text-brand-gold uppercase tracking-widest">Data Inicial</label>
+                <input
+                  type="date"
+                  value={reportStartDate}
+                  onChange={(e) => setReportStartDate(e.target.value)}
+                  className="bg-brand-black border border-white/10 text-xs font-sans text-white rounded p-2.5 focus:outline-none focus:border-brand-gold"
+                />
+              </div>
+
+              <div className={`flex flex-col gap-1 ${reportType === 'estoque' ? 'opacity-40 pointer-events-none' : ''}`}>
+                <label className="text-[9px] font-sans text-brand-gold uppercase tracking-widest">Data Final</label>
+                <input
+                  type="date"
+                  value={reportEndDate}
+                  onChange={(e) => setReportEndDate(e.target.value)}
+                  className="bg-brand-black border border-white/10 text-xs font-sans text-white rounded p-2.5 focus:outline-none focus:border-brand-gold"
+                />
+              </div>
+
+              <div className={`flex flex-col gap-1 ${reportType !== 'produto_especifico' ? 'opacity-30 pointer-events-none' : ''}`}>
+                <label className="text-[9px] font-sans text-brand-gold uppercase tracking-widest">Produto Selecionado</label>
+                <select
+                  value={reportProductId}
+                  onChange={(e) => setReportProductId(e.target.value)}
+                  disabled={reportType !== 'produto_especifico'}
+                  className="bg-brand-black border border-white/10 text-xs font-sans text-white rounded p-2.5 focus:outline-none focus:border-brand-gold cursor-pointer disabled:cursor-not-allowed"
+                >
+                  {products.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Active Report Rendering */}
+            <div className="space-y-6">
+              {renderActiveReport()}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MODAL CADASTRAR */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
@@ -643,10 +1184,20 @@ export default function AdminMovimentacoesPage() {
                 >
                   {products.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name} (Ref: {formatPrice(p.price)})
+                      {p.name} (Estoque: {p.stock_quantity || 0} un)
                     </option>
                   ))}
                 </select>
+                {(() => {
+                  const p = products.find(prod => prod.id === productId)
+                  if (!p) return null
+                  return (
+                    <div className="mt-2 text-[10px] font-sans text-brand-silver flex justify-between px-1">
+                      <span>Preço base: <strong className="text-white">{formatPrice(p.price)}</strong></span>
+                      <span>Disponível em estoque: <strong className={(p.stock_quantity || 0) > 0 ? "text-green-400" : "text-red-400"}>{p.stock_quantity || 0} un</strong></span>
+                    </div>
+                  )
+                })()}
               </div>
 
               {/* Tipo */}

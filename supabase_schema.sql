@@ -25,6 +25,7 @@ CREATE TABLE products (
     status TEXT NOT NULL DEFAULT 'in_stock' CONSTRAINT check_status CHECK (status IN ('in_stock', 'pre_order', 'on_request')),
     featured BOOLEAN DEFAULT false NOT NULL,
     display_order INTEGER DEFAULT 0 NOT NULL,
+    brand TEXT,
     category_id UUID REFERENCES categories(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL

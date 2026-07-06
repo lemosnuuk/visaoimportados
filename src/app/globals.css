@@ -199,3 +199,57 @@
 .animate-pulse-subtle {
   animation: pulse-subtle 4s ease-in-out infinite;
 }
+
+/* Print Optimization for Reports */
+@media print {
+  body, html {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    background-image: none !important;
+  }
+
+  /* Hide non-report layout structures */
+  aside, nav, header, footer, button, .print\:hidden {
+    display: none !important;
+  }
+
+  /* Ensure modal takes full printable space without black overlays */
+  .fixed, [class*="backdrop-blur"] {
+    position: relative !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    inset: auto !important;
+    padding: 0 !important;
+    backdrop-filter: none !important;
+  }
+
+  .bg-brand-black {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: none !important;
+  }
+
+  /* Force printable text readability and border contrast */
+  .text-white, .text-brand-silver, .text-brand-white, .text-brand-gold, .text-brand-gold-light, .text-green-400 {
+    color: #000000 !important;
+  }
+
+  .bg-white\/\[0\.02\], .bg-black\/35, .bg-black\/40 {
+    background-color: #ffffff !important;
+    border: 1px solid #e5e7eb !important;
+  }
+
+  table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+
+  th, td {
+    border-bottom: 1px solid #e5e7eb !important;
+    color: #000000 !important;
+  }
+
+  tr:hover {
+    background-color: transparent !important;
+  }
+}

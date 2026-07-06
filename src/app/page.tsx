@@ -32,6 +32,7 @@ import {
 interface Product {
   id: string
   name: string
+  brand?: string | null
   slug: string
   description: string
   price: number
@@ -217,7 +218,7 @@ export default function Home() {
         const { data: dbProducts, error: prodError } = await supabase
           .from('products')
           .select(`
-            id, name, slug, description, price, sale_price, status, featured, display_order,
+            id, name, brand, slug, description, price, sale_price, status, featured, display_order,
             categories(name),
             product_images(image_url)
           `)
@@ -238,6 +239,7 @@ export default function Home() {
             return {
               id: p.id,
               name: p.name,
+              brand: p.brand || null,
               slug: p.slug,
               description: p.description || '',
               price: Number(p.price),
@@ -648,42 +650,62 @@ export default function Home() {
               {featuredProducts.map((product) => (
                 <div 
                   key={product.id}
-                  className="bg-brand-black border border-white/5 hover:border-white/10 rounded overflow-hidden flex flex-col group transition-all duration-300"
+                  className="bg-brand-black border border-white/5 hover:border-brand-gold/30 rounded-lg overflow-hidden flex flex-col group transition-all duration-500 hover:shadow-[0_8px_30px_rgba(212,175,55,0.06)] hover:-translate-y-0.5"
                 >
                   <Link href={`/produto/${product.slug}`} className="relative h-80 overflow-hidden block">
                     <Image
                       src={product.image_url}
                       alt={product.name}
                       fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-700"
+                      className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
                     />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                     <div className="absolute top-4 left-4 z-10">
                       {renderStatusBadge(product.status)}
                     </div>
                   </Link>
 
-                  <div className="p-6 flex flex-col flex-grow">
-                    <span className="text-[10px] font-sans text-brand-gold uppercase tracking-widest mb-1.5">{product.category_name}</span>
+                  <div className="p-6 flex flex-col flex-grow bg-gradient-to-b from-brand-black to-black/90">
+                    <span className="text-[9px] font-sans text-brand-gold uppercase tracking-widest mb-1.5 font-bold">
+                      {product.category_name} {product.brand && `• ${product.brand}`}
+                    </span>
                     <Link href={`/produto/${product.slug}`}>
-                      <h3 className="font-title text-sm text-white mb-2 uppercase tracking-wide group-hover:text-brand-gold transition-colors duration-300 min-h-10">
+                      <h3 className="font-title text-sm text-white mb-2 uppercase tracking-wide group-hover:text-brand-gold transition-colors duration-300 min-h-10 font-bold leading-tight">
                         {product.name}
                       </h3>
                     </Link>
-                    <p className="font-sans text-xs text-brand-silver/70 line-clamp-2 mb-6">
+                    <p className="font-sans text-xs text-brand-silver/60 line-clamp-2 mb-6 leading-relaxed">
                       {product.description}
                     </p>
 
-                    <div className="mt-auto flex items-center justify-between pt-4 border-t border-white/5">
-                      <div className="flex flex-col">
+                    <div className="mt-auto flex items-center justify-between pt-5 border-t border-white/5">
+                      <div className="flex flex-col justify-center">
                         {product.sale_price ? (
-                          <>
-                            <span className="text-[10px] font-sans text-brand-silver line-through">{formatPrice(product.price)}</span>
-                            <span className="text-sm font-sans font-bold text-brand-gold-light">{formatPrice(product.sale_price)}</span>
-                          </>
+                          <div className="space-y-0.5">
+                            <span className="text-[10px] font-sans text-brand-silver line-through block leading-none">
+                              {formatPrice(product.price)}
+                            </span>
+                            <span className="text-xl font-title font-black text-brand-gold-light tracking-tight block">
+                              {formatPrice(product.sale_price)}
+                            </span>
+                          </div>
                         ) : (
-                          <span className="text-sm font-sans font-bold text-white">
-                            {product.status === 'on_request' ? 'Cotação sob Consulta' : formatPrice(product.price)}
-                          </span>
+                          <div className="space-y-0.5">
+                            {product.status === 'on_request' ? (
+                              <span className="text-xs font-title font-bold text-brand-silver uppercase tracking-widest block py-1">
+                                Sob Consulta
+                              </span>
+                            ) : (
+                              <>
+                                <span className="text-[9px] font-sans text-brand-silver uppercase tracking-widest block leading-none mb-0.5">
+                                  Valor
+                                </span>
+                                <span className="text-xl font-title font-black text-white tracking-tight block">
+                                  {formatPrice(product.price)}
+                                </span>
+                              </>
+                            )}
+                          </div>
                         )}
                       </div>
 
@@ -699,7 +721,7 @@ export default function Home() {
                             status: product.status
                           })
                         }}
-                        className="p-2.5 bg-white/5 border border-white/10 hover:border-brand-gold hover:bg-brand-gold hover:text-black rounded text-white transition-all duration-300"
+                        className="p-3 bg-white/5 border border-white/10 hover:border-brand-gold hover:bg-gold-gradient hover:text-black rounded-lg text-white transition-all duration-300 shadow-md hover:shadow-brand-gold/20"
                         title="Adicionar ao Carrinho"
                       >
                         <Plus className="w-4 h-4" />
