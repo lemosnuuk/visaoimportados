@@ -66,7 +66,7 @@ export default function Navbar() {
             <span className="font-title text-lg tracking-wider text-white group-hover:text-brand-gold transition-colors duration-300">
               VISÃO IMPORTADOS
             </span>
-            <span className="text-[9px] font-sans tracking-widest text-brand-silver uppercase">
+            <span className="text-[10px] font-sans tracking-widest text-brand-gold font-bold uppercase drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
               Exclusividade & Luxo
             </span>
           </div>

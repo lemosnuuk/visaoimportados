@@ -439,10 +439,10 @@ export default function Home() {
                 animate={{
                   scale: isHovered ? 1.05 : 1,
                   filter: isHovered 
-                    ? 'brightness(0.45) contrast(1.05)' 
+                    ? 'brightness(0.3) contrast(1.1)' 
                     : isAnyHovered 
-                      ? 'brightness(0.15) blur(2px)' 
-                      : 'brightness(0.25)'
+                      ? 'brightness(0.12) blur(2px)' 
+                      : 'brightness(0.2)'
                 }}
                 transition={{ duration: 0.6 }}
               >
@@ -455,8 +455,8 @@ export default function Home() {
                 />
               </motion.div>
 
-              {/* Dark Gradient bottom overlay for text readability */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-10 pointer-events-none" />
+              {/* Dark Gradient bottom overlay for maximum text readability */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent z-10 pointer-events-none" />
 
               {/* Glowing Ambient light behind text when hovered */}
               <AnimatePresence>
@@ -474,18 +474,18 @@ export default function Home() {
               <div className="relative z-20 w-full max-w-md mx-auto px-8 flex flex-col items-center text-center gap-3">
                 
                 {/* Subtitle / Tagline */}
-                <span className="text-brand-gold text-[9px] font-sans font-bold tracking-[0.25em] uppercase">
+                <span className="text-brand-gold text-[10px] font-sans font-bold tracking-[0.25em] uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,1)]">
                   {col.subtitle}
                 </span>
 
                 {/* Title */}
-                <h2 className="font-title text-2xl sm:text-3xl lg:text-4xl text-white uppercase tracking-wider transition-colors duration-300 group-hover:text-brand-gold">
+                <h2 className="font-title text-2xl sm:text-3xl lg:text-4xl text-white font-bold uppercase tracking-wider transition-colors duration-300 group-hover:text-brand-gold drop-shadow-[0_4px_12px_rgba(0,0,0,1)]">
                   {col.title}
                 </h2>
 
                 {/* Separator line */}
                 <motion.div 
-                  className="h-0.5 bg-brand-gold"
+                  className="h-0.5 bg-brand-gold shadow-[0_0_10px_rgba(212,175,55,0.9)]"
                   animate={{ width: isHovered ? '80px' : '40px' }}
                   transition={{ duration: 0.4 }}
                 />
@@ -502,7 +502,7 @@ export default function Home() {
                     transition={{ duration: 0.5, ease: "easeOut" }}
                     className="flex flex-col items-center gap-6"
                   >
-                    <p className="font-sans text-xs text-brand-silver/90 leading-relaxed max-w-xs mt-2">
+                    <p className="font-sans text-xs text-white/90 leading-relaxed max-w-xs mt-2">
                       {col.description}
                     </p>
 
