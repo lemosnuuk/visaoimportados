@@ -4,9 +4,8 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, Loader2, Upload, X, ImageIcon } from 'lucide-react'
+import { ArrowLeft, Loader2, Upload, X, ImageIcon, ChevronLeft, ChevronRight, Star } from 'lucide-react'
 import Image from 'next/image'
-
 
 interface Category {
   id: string
@@ -16,6 +15,7 @@ interface Category {
 interface ProductImage {
   id: string
   image_url: string
+  display_order?: number
 }
 
 interface PageProps {
@@ -45,7 +45,7 @@ export default function AdminEditarProdutoPage({ params }: PageProps) {
 
   // Image states
   const [existingImages, setExistingImages] = useState<ProductImage[]>([])
-  const [imagesToDelete, setImagesToDelete] = useState<string[]>([]) // holds database image IDs to delete on save
+  const [imagesToDelete, setImagesToDelete] = useState<string[]>([]) // database image IDs to delete
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [previews, setPreviews] = useState<string[]>([])
@@ -64,7 +64,7 @@ export default function AdminEditarProdutoPage({ params }: PageProps) {
         // 2. Fetch product by ID
         const { data: prod, error: prodErr } = await supabase
           .from('products')
-          .select('*, product_images(id, image_url)')
+          .select('*, product_images(id, image_url, display_order)')
           .eq('id', id)
           .single()
 
@@ -77,14 +77,23 @@ export default function AdminEditarProdutoPage({ params }: PageProps) {
         setName(prod.name)
         setBrand(prod.brand || '')
         setCategoryId(prod.category_id || '')
-        setPrice(String(prod.price))
-        setSalePrice(prod.sale_price ? String(prod.sale_price) : '')
+        setPrice(prod.price !== null && prod.price !== undefined ? String(prod.price) : '')
+        setSalePrice(prod.sale_price !== null && prod.sale_price !== undefined ? String(prod.sale_price) : '')
         setDescription(prod.description || '')
         setStatus(prod.status)
         setFeatured(prod.featured)
         setDisplayOrder(String(prod.display_order))
-        setExistingImages(prod.product_images || [])
         setStockQuantity(prod.stock_quantity || 0)
+
+        // Sort fetched images by display_order asc
+        if (prod.product_images) {
+          const sortedImgs = [...prod.product_images].sort((a: any, b: any) => {
+            const orderA = a.display_order ?? 0
+            const orderB = b.display_order ?? 0
+            return orderA - orderB
+          })
+          setExistingImages(sortedImgs)
+        }
 
       } catch (err) {
         console.error('Error loading product form data:', err)
@@ -122,6 +131,66 @@ export default function AdminEditarProdutoPage({ params }: PageProps) {
     setExistingImages((prev) => prev.filter(img => img.id !== imageId))
   }
 
+  // Reorder existing images
+  const moveExistingLeft = (index: number) => {
+    if (index <= 0) return
+    setExistingImages(prev => {
+      const updated = [...prev]
+      const temp = updated[index]
+      updated[index] = updated[index - 1]
+      updated[index - 1] = temp
+      return updated
+    })
+  }
+
+  const moveExistingRight = (index: number) => {
+    if (index >= existingImages.length - 1) return
+    setExistingImages(prev => {
+      const updated = [...prev]
+      const temp = updated[index]
+      updated[index] = updated[index + 1]
+      updated[index + 1] = temp
+      return updated
+    })
+  }
+
+  // Reorder new previews
+  const moveNewLeft = (index: number) => {
+    if (index <= 0) return
+    setSelectedFiles(prev => {
+      const updated = [...prev]
+      const temp = updated[index]
+      updated[index] = updated[index - 1]
+      updated[index - 1] = temp
+      return updated
+    })
+    setPreviews(prev => {
+      const updated = [...prev]
+      const temp = updated[index]
+      updated[index] = updated[index - 1]
+      updated[index - 1] = temp
+      return updated
+    })
+  }
+
+  const moveNewRight = (index: number) => {
+    if (index >= selectedFiles.length - 1) return
+    setSelectedFiles(prev => {
+      const updated = [...prev]
+      const temp = updated[index]
+      updated[index] = updated[index + 1]
+      updated[index + 1] = temp
+      return updated
+    })
+    setPreviews(prev => {
+      const updated = [...prev]
+      const temp = updated[index]
+      updated[index] = updated[index + 1]
+      updated[index + 1] = temp
+      return updated
+    })
+  }
+
   // Drag listeners
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault()
@@ -154,17 +223,17 @@ export default function AdminEditarProdutoPage({ params }: PageProps) {
     return text
       .toLowerCase()
       .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // remove accents
-      .replace(/[^a-z0-9\s-]/g, '') // remove invalid chars
-      .replace(/\s+/g, '-') // collapse whitespace and replace by -
-      .replace(/-+/g, '-') // collapse dashes
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
       .trim()
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name || !categoryId || !price) {
-      alert('Por favor, preencha os campos obrigatórios.')
+    if (!name || !categoryId) {
+      alert('Por favor, preencha o Nome e a Categoria do produto.')
       return
     }
 
@@ -172,6 +241,9 @@ export default function AdminEditarProdutoPage({ params }: PageProps) {
     const slug = generateSlug(name)
 
     try {
+      const parsedPrice = price.trim() ? parseFloat(price) : null
+      const parsedSalePrice = salePrice.trim() ? parseFloat(salePrice) : null
+
       // 1. Update product table
       const { error: updateError } = await supabase
         .from('products')
@@ -180,8 +252,8 @@ export default function AdminEditarProdutoPage({ params }: PageProps) {
           slug,
           brand: brand || null,
           category_id: categoryId,
-          price: parseFloat(price),
-          sale_price: salePrice ? parseFloat(salePrice) : null,
+          price: parsedPrice,
+          sale_price: parsedSalePrice,
           description,
           status,
           featured,
@@ -195,11 +267,9 @@ export default function AdminEditarProdutoPage({ params }: PageProps) {
         return
       }
 
-      // 2. Perform queued image deletions from DB
+      // 2. Delete queued existing images
       if (imagesToDelete.length > 0) {
         for (const imgId of imagesToDelete) {
-          // Deleting from DB. Storage files can remain or be cleaned up,
-          // but DB RLS cascading lets us simply delete the row.
           await supabase
             .from('product_images')
             .delete()
@@ -207,9 +277,20 @@ export default function AdminEditarProdutoPage({ params }: PageProps) {
         }
       }
 
-      // 3. Upload new images to Supabase Storage if any
+      // 3. Update display_order for remaining existing images
+      for (let i = 0; i < existingImages.length; i++) {
+        const img = existingImages[i]
+        await supabase
+          .from('product_images')
+          .update({ display_order: i })
+          .eq('id', img.id)
+      }
+
+      // 4. Upload new images to Supabase Storage with display_order starting after existing
       if (selectedFiles.length > 0) {
-        for (const file of selectedFiles) {
+        const startOrder = existingImages.length
+        for (let i = 0; i < selectedFiles.length; i++) {
+          const file = selectedFiles[i]
           const fileExtension = file.name.split('.').pop()
           const fileName = `${id}-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExtension}`
           const filePath = `${fileName}`
@@ -223,17 +304,16 @@ export default function AdminEditarProdutoPage({ params }: PageProps) {
             continue
           }
 
-          // Get URL
           const { data: { publicUrl } } = supabase.storage
             .from('product-images')
             .getPublicUrl(filePath)
 
-          // Link in DB
           await supabase
             .from('product_images')
             .insert([{
               product_id: id,
-              image_url: publicUrl
+              image_url: publicUrl,
+              display_order: startOrder + i
             }])
         }
       }
@@ -249,59 +329,59 @@ export default function AdminEditarProdutoPage({ params }: PageProps) {
   }
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-10">
       {/* HEADER */}
       <div className="flex items-center gap-4">
         <Link
           href="/admin/produtos"
-          className="p-2 border border-white/10 hover:border-brand-gold text-brand-silver hover:text-white rounded transition-colors"
+          className="p-2.5 border border-white/10 hover:border-brand-gold text-slate-300 hover:text-white rounded transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="w-5 h-5" />
         </Link>
         <div>
           <h1 className="font-title text-2xl sm:text-3xl text-white uppercase tracking-wide">Editar Produto</h1>
-          <p className="font-sans text-xs text-brand-silver mt-1">Modifique as informações do item selecionado</p>
+          <p className="font-sans text-sm text-slate-300 mt-1">Modifique as informações e fotos do item selecionado</p>
         </div>
       </div>
 
       {loading ? (
         <div className="py-20 text-center">
           <Loader2 className="w-8 h-8 animate-spin text-brand-gold mx-auto" />
-          <p className="text-xs font-sans text-brand-silver mt-3">Carregando detalhes do produto...</p>
+          <p className="text-sm font-sans text-slate-300 mt-3">Carregando detalhes do produto...</p>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-8 bg-brand-black border border-white/5 rounded-lg p-8">
+        <form onSubmit={handleSubmit} className="space-y-8 bg-brand-black border border-white/10 rounded-lg p-8">
           {/* GENERAL INFO */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <label className="block text-[10px] font-sans text-brand-gold uppercase tracking-widest mb-2">Nome do Produto *</label>
+              <label className="block text-xs font-sans font-bold text-brand-gold uppercase tracking-wider mb-2">Nome do Produto *</label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full bg-black border border-white/10 rounded px-4 py-3 text-xs font-sans focus:outline-none focus:border-brand-gold text-white"
+                className="w-full bg-black border border-white/15 rounded px-4 py-3 text-sm font-sans focus:outline-none focus:border-brand-gold text-white"
               />
             </div>
 
             <div>
-              <label className="block text-[10px] font-sans text-brand-gold uppercase tracking-widest mb-2">Marca (Opcional)</label>
+              <label className="block text-xs font-sans font-bold text-brand-gold uppercase tracking-wider mb-2">Marca (Opcional)</label>
               <input
                 type="text"
                 value={brand}
                 onChange={(e) => setBrand(e.target.value)}
                 placeholder="Ex: Chanel, Apple, JBL"
-                className="w-full bg-black border border-white/10 rounded px-4 py-3 text-xs font-sans focus:outline-none focus:border-brand-gold text-white"
+                className="w-full bg-black border border-white/15 rounded px-4 py-3 text-sm font-sans focus:outline-none focus:border-brand-gold text-white"
               />
             </div>
 
             <div>
-              <label className="block text-[10px] font-sans text-brand-gold uppercase tracking-widest mb-2">Categoria *</label>
+              <label className="block text-xs font-sans font-bold text-brand-gold uppercase tracking-wider mb-2">Categoria *</label>
               <select
                 required
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full bg-black border border-white/10 rounded px-4 py-3 text-xs font-sans focus:outline-none focus:border-brand-gold text-white cursor-pointer"
+                className="w-full bg-black border border-white/15 rounded px-4 py-3 text-sm font-sans focus:outline-none focus:border-brand-gold text-white cursor-pointer"
               >
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -315,54 +395,60 @@ export default function AdminEditarProdutoPage({ params }: PageProps) {
           {/* PRICING */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <div>
-              <label className="block text-[10px] font-sans text-brand-gold uppercase tracking-widest mb-2">Preço Base (R$) *</label>
+              <label className="block text-xs font-sans font-bold text-brand-gold uppercase tracking-wider mb-2">
+                Preço Base (R$ - Opcional)
+              </label>
               <input
                 type="number"
                 step="0.01"
-                required
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
-                className="w-full bg-black border border-white/10 rounded px-4 py-3 text-xs font-sans focus:outline-none focus:border-brand-gold text-white"
+                placeholder="Deixe em branco p/ Sob Consulta"
+                className="w-full bg-black border border-white/15 rounded px-4 py-3 text-sm font-sans focus:outline-none focus:border-brand-gold text-white"
               />
+              <span className="text-[11px] font-sans text-slate-400 mt-1 block">
+                Se deixar em branco, o valor será exibido como "Sob Consulta" ou "Sob Encomenda".
+              </span>
             </div>
 
             <div>
-              <label className="block text-[10px] font-sans text-brand-gold uppercase tracking-widest mb-2">Preço Promocional (R$ - Opcional)</label>
+              <label className="block text-xs font-sans font-bold text-brand-gold uppercase tracking-wider mb-2">Preço Promocional (R$ - Opcional)</label>
               <input
                 type="number"
                 step="0.01"
                 value={salePrice}
                 onChange={(e) => setSalePrice(e.target.value)}
-                className="w-full bg-black border border-white/10 rounded px-4 py-3 text-xs font-sans focus:outline-none focus:border-brand-gold text-white"
+                placeholder="Ex: 899.00"
+                className="w-full bg-black border border-white/15 rounded px-4 py-3 text-sm font-sans focus:outline-none focus:border-brand-gold text-white"
               />
             </div>
 
             <div>
-              <label className="block text-[10px] font-sans text-brand-gold uppercase tracking-widest mb-2">Status do Produto *</label>
+              <label className="block text-xs font-sans font-bold text-brand-gold uppercase tracking-wider mb-2">Status do Produto *</label>
               <select
                 required
                 value={status}
                 onChange={(e) => setStatus(e.target.value as any)}
-                className="w-full bg-black border border-white/10 rounded px-4 py-3 text-xs font-sans focus:outline-none focus:border-brand-gold text-white cursor-pointer"
+                className="w-full bg-black border border-white/15 rounded px-4 py-3 text-sm font-sans focus:outline-none focus:border-brand-gold text-white cursor-pointer"
               >
                 <option value="in_stock">Em Estoque</option>
                 <option value="pre_order">Sob Encomenda</option>
-                <option value="on_request">Importação sob Consulta</option>
+                <option value="on_request">Sob Consulta</option>
               </select>
             </div>
           </div>
 
           {/* STOCK INFO (READ ONLY) */}
-          <div className="bg-white/5 border border-white/5 rounded p-4">
+          <div className="bg-white/5 border border-white/10 rounded-lg p-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h4 className="text-[10px] font-sans text-brand-gold uppercase tracking-widest font-bold">Estoque Atual</h4>
-                <p className="text-xs font-sans text-brand-silver mt-1">
-                  Este produto possui <strong className="text-white font-mono">{stockQuantity}</strong> unidades registradas em estoque.
+                <h4 className="text-xs font-sans text-brand-gold uppercase tracking-wider font-bold">Estoque Atual Físico</h4>
+                <p className="text-sm font-sans text-slate-300 mt-1">
+                  Este produto possui <strong className="text-white font-mono text-base">{stockQuantity}</strong> unidades registradas em estoque.
                 </p>
               </div>
-              <span className="text-[10px] font-sans text-brand-silver bg-black border border-white/10 px-3 py-1.5 rounded uppercase tracking-wider text-center sm:text-left">
-                Ajustável via aba "Movimentações"
+              <span className="text-xs font-sans text-slate-300 bg-black border border-white/15 px-4 py-2 rounded uppercase tracking-wider text-center sm:text-left">
+                Gerenciável via aba "Movimentações"
               </span>
             </div>
           </div>
@@ -370,22 +456,22 @@ export default function AdminEditarProdutoPage({ params }: PageProps) {
           {/* ADDITIONAL INFO */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
-              <label className="block text-[10px] font-sans text-brand-gold uppercase tracking-widest mb-2">Ordem de Exibição (Crescente)</label>
+              <label className="block text-xs font-sans font-bold text-brand-gold uppercase tracking-wider mb-2">Ordem de Exibição do Produto</label>
               <input
                 type="number"
                 value={displayOrder}
                 onChange={(e) => setDisplayOrder(e.target.value)}
-                className="w-full bg-black border border-white/10 rounded px-4 py-3 text-xs font-sans focus:outline-none focus:border-brand-gold text-white"
+                className="w-full bg-black border border-white/15 rounded px-4 py-3 text-sm font-sans focus:outline-none focus:border-brand-gold text-white"
               />
             </div>
 
             <div className="flex items-center h-full pt-6">
-              <label className="flex items-center gap-3 cursor-pointer text-xs font-sans text-white">
+              <label className="flex items-center gap-3 cursor-pointer text-sm font-sans text-white">
                 <input
                   type="checkbox"
                   checked={featured}
                   onChange={(e) => setFeatured(e.target.checked)}
-                  className="w-5 h-5 rounded bg-black border border-white/10 text-brand-gold focus:ring-0 cursor-pointer accent-brand-gold"
+                  className="w-5 h-5 rounded bg-black border border-white/20 text-brand-gold focus:ring-0 cursor-pointer accent-brand-gold"
                 />
                 Marcar como Produto em Destaque (Exibe na Home)
               </label>
@@ -394,24 +480,36 @@ export default function AdminEditarProdutoPage({ params }: PageProps) {
 
           {/* DESCRIPTION */}
           <div>
-            <label className="block text-[10px] font-sans text-brand-gold uppercase tracking-widest mb-2">Descrição Detalhada</label>
+            <label className="block text-xs font-sans font-bold text-brand-gold uppercase tracking-wider mb-2">Descrição Detalhada</label>
             <textarea
               rows={5}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full bg-black border border-white/10 rounded px-4 py-3 text-xs font-sans focus:outline-none focus:border-brand-gold text-white resize-none"
+              className="w-full bg-black border border-white/15 rounded px-4 py-3 text-sm font-sans focus:outline-none focus:border-brand-gold text-white resize-none"
             />
           </div>
 
-          {/* CURRENT IMAGES */}
-          {existingImages.length > 0 && (
-            <div>
-              <label className="block text-[10px] font-sans text-brand-gold uppercase tracking-widest mb-4">Imagens Atuais da Galeria</label>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-                {existingImages.map((img) => (
+          {/* EXISTING IMAGES WITH REORDERING */}
+          <div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+              <label className="block text-xs font-sans font-bold text-brand-gold uppercase tracking-wider">
+                Galeria Atual do Produto & Reordenação ({existingImages.length})
+              </label>
+              <span className="text-xs text-slate-300 font-sans">
+                A 1ª foto é a <strong>Capa Oficial</strong>. Use as setas para alterar a posição das fotos.
+              </span>
+            </div>
+
+            {existingImages.length === 0 ? (
+              <p className="text-xs font-sans text-slate-400 py-3 italic">Nenhuma foto cadastrada atualmente.</p>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4">
+                {existingImages.map((img, index) => (
                   <div
                     key={img.id}
-                    className="relative aspect-square rounded border border-white/10 overflow-hidden group bg-black"
+                    className={`relative aspect-square rounded-lg border overflow-hidden group bg-black flex flex-col justify-between ${
+                      index === 0 ? 'border-brand-gold ring-2 ring-brand-gold/40' : 'border-white/15'
+                    }`}
                   >
                     <Image
                       src={img.image_url}
@@ -419,23 +517,66 @@ export default function AdminEditarProdutoPage({ params }: PageProps) {
                       fill
                       className="object-cover"
                     />
+
+                    {/* Badge Cover */}
+                    <div className="absolute top-2 left-2 z-10">
+                      {index === 0 ? (
+                        <span className="px-2 py-1 text-[10px] font-sans font-bold uppercase bg-brand-gold text-black rounded flex items-center gap-1 shadow">
+                          <Star className="w-3 h-3 fill-black" />
+                          Capa
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-black/80 text-white rounded">
+                          #{index + 1}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Delete button */}
                     <button
                       type="button"
                       onClick={() => queueDeleteExisting(img.id)}
-                      className="absolute top-2 right-2 p-1.5 bg-black/80 hover:bg-red-500 rounded text-white transition-colors"
-                      title="Excluir imagem"
+                      className="absolute top-2 right-2 z-10 p-1.5 bg-black/80 hover:bg-red-500 rounded text-white transition-colors"
+                      title="Excluir foto"
                     >
-                      <X className="w-3.5 h-3.5" />
+                      <X className="w-4 h-4" />
                     </button>
+
+                    {/* Controls bar bottom */}
+                    <div className="absolute bottom-0 inset-x-0 p-2 bg-gradient-to-t from-black via-black/80 to-transparent flex justify-between items-center z-10">
+                      <button
+                        type="button"
+                        disabled={index === 0}
+                        onClick={() => moveExistingLeft(index)}
+                        className="p-1 bg-white/10 hover:bg-brand-gold hover:text-black rounded text-white disabled:opacity-30 transition-colors"
+                        title="Mover para esquerda"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <span className="text-[10px] font-sans text-slate-300 font-bold">
+                        {index + 1}º
+                      </span>
+                      <button
+                        type="button"
+                        disabled={index === existingImages.length - 1}
+                        onClick={() => moveExistingRight(index)}
+                        className="p-1 bg-white/10 hover:bg-brand-gold hover:text-black rounded text-white disabled:opacity-30 transition-colors"
+                        title="Mover para direita"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* NEW IMAGES UPLOAD */}
           <div>
-            <label className="block text-[10px] font-sans text-brand-gold uppercase tracking-widest mb-2">Adicionar Novas Imagens</label>
+            <label className="block text-xs font-sans font-bold text-brand-gold uppercase tracking-wider mb-2">
+              Adicionar Novas Imagens à Galeria
+            </label>
             
             <div
               onDragEnter={handleDrag}
@@ -444,15 +585,15 @@ export default function AdminEditarProdutoPage({ params }: PageProps) {
               onDrop={handleDrop}
               className={`border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center transition-all ${
                 dragActive
-                  ? 'border-brand-gold bg-brand-gold/5'
-                  : 'border-white/10 bg-black hover:border-white/20'
+                  ? 'border-brand-gold bg-brand-gold/10'
+                  : 'border-white/20 bg-black hover:border-white/40'
               }`}
             >
-              <Upload className="w-10 h-10 text-brand-gold mb-4" />
-              <p className="font-sans text-xs text-brand-white font-bold mb-1">Arraste e solte arquivos aqui</p>
-              <p className="font-sans text-[10px] text-brand-silver mb-4">Ou clique para procurar arquivos</p>
+              <Upload className="w-10 h-10 text-brand-gold mb-3" />
+              <p className="font-sans text-sm text-white font-bold mb-1">Arraste e solte novos arquivos aqui</p>
+              <p className="font-sans text-xs text-slate-300 mb-4">Ou clique para procurar arquivos de imagem</p>
               
-              <label className="px-4 py-2 border border-white/20 text-brand-white text-xs font-sans font-bold uppercase rounded hover:border-brand-gold hover:text-brand-gold cursor-pointer transition-colors">
+              <label className="px-5 py-2.5 border border-white/20 text-white text-xs font-sans font-bold uppercase rounded hover:border-brand-gold hover:text-brand-gold cursor-pointer transition-colors">
                 Selecionar Arquivos
                 <input
                   type="file"
@@ -464,36 +605,70 @@ export default function AdminEditarProdutoPage({ params }: PageProps) {
               </label>
             </div>
 
-            {/* NEW PREVIEWS */}
+            {/* NEW PREVIEWS WITH REORDERING */}
             {previews.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-6">
-                {previews.map((preview, index) => (
-                  <div
-                    key={index}
-                    className="relative aspect-square rounded border border-white/10 overflow-hidden group bg-black"
-                  >
-                    <Image
-                      src={preview}
-                      alt={`Novo Upload Preview ${index + 1}`}
-                      fill
-                      className="object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeNewFile(index)}
-                      className="absolute top-2 right-2 p-1.5 bg-black/80 hover:bg-red-500 rounded text-white transition-colors"
-                      title="Remover imagem"
+              <div className="mt-6 space-y-3">
+                <h4 className="text-xs font-sans font-bold text-slate-300 uppercase tracking-wider">
+                  Novas Imagens Selecionadas ({previews.length})
+                </h4>
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4">
+                  {previews.map((preview, index) => (
+                    <div
+                      key={index}
+                      className="relative aspect-square rounded-lg border border-white/15 overflow-hidden group bg-black flex flex-col justify-between"
                     >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
+                      <Image
+                        src={preview}
+                        alt={`Novo Preview ${index + 1}`}
+                        fill
+                        className="object-cover"
+                      />
+                      
+                      <div className="absolute top-2 left-2 z-10">
+                        <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-black/80 text-white rounded">
+                          +{index + 1}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => removeNewFile(index)}
+                        className="absolute top-2 right-2 z-10 p-1.5 bg-black/80 hover:bg-red-500 rounded text-white transition-colors"
+                        title="Remover foto"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+
+                      <div className="absolute bottom-0 inset-x-0 p-2 bg-gradient-to-t from-black via-black/80 to-transparent flex justify-between items-center z-10">
+                        <button
+                          type="button"
+                          disabled={index === 0}
+                          onClick={() => moveNewLeft(index)}
+                          className="p-1 bg-white/10 hover:bg-brand-gold hover:text-black rounded text-white disabled:opacity-30 transition-colors"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </button>
+                        <span className="text-[10px] font-sans text-slate-300 font-bold">
+                          {existingImages.length + index + 1}º
+                        </span>
+                        <button
+                          type="button"
+                          disabled={index === previews.length - 1}
+                          onClick={() => moveNewRight(index)}
+                          className="p-1 bg-white/10 hover:bg-brand-gold hover:text-black rounded text-white disabled:opacity-30 transition-colors"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
 
           {/* ACTIONS */}
-          <div className="flex gap-4 pt-6 border-t border-white/5">
+          <div className="flex gap-4 pt-6 border-t border-white/10">
             <button
               type="submit"
               disabled={submitLoading}

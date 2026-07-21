@@ -9,7 +9,6 @@ import {
   Sparkles, 
   Plus, 
   Calendar, 
-  TrendingUp, 
   ArrowUpRight 
 } from 'lucide-react'
 
@@ -22,7 +21,7 @@ interface Stats {
 interface RecentProduct {
   id: string
   name: string
-  price: number
+  price: number | null
   status: string
   created_at: string
   category_name: string
@@ -78,7 +77,7 @@ export default function AdminDashboardPage() {
           const formatted = recent.map((p: any) => ({
             id: p.id,
             name: p.name,
-            price: Number(p.price),
+            price: p.price !== null && p.price !== undefined ? Number(p.price) : null,
             status: p.status,
             created_at: p.created_at,
             category_name: p.categories?.name || 'Importado'
@@ -95,7 +94,8 @@ export default function AdminDashboardPage() {
     loadDashboardData()
   }, [])
 
-  const formatPrice = (price: number) => {
+  const formatPrice = (price: number | null) => {
+    if (price === null || price === undefined) return 'Sob Consulta'
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
@@ -105,28 +105,28 @@ export default function AdminDashboardPage() {
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'in_stock':
-        return <span className="text-[10px] uppercase font-bold text-green-400">Em Estoque</span>
+        return <span className="text-xs uppercase font-bold text-green-400">Em Estoque</span>
       case 'pre_order':
-        return <span className="text-[10px] uppercase font-bold text-amber-400">Sob Encomenda</span>
+        return <span className="text-xs uppercase font-bold text-amber-400">Sob Encomenda</span>
       case 'on_request':
-        return <span className="text-[10px] uppercase font-bold text-blue-400">Sob Consulta</span>
+        return <span className="text-xs uppercase font-bold text-blue-400">Sob Consulta</span>
       default:
-        return <span className="text-[10px] uppercase font-bold text-brand-silver">{status}</span>
+        return <span className="text-xs uppercase font-bold text-slate-300">{status}</span>
     }
   }
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-10">
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
         <div>
           <h1 className="font-title text-2xl sm:text-3xl text-white uppercase tracking-wide">Visão Geral</h1>
-          <p className="font-sans text-xs text-brand-silver mt-1">Estatísticas e atividades recentes do catálogo</p>
+          <p className="font-sans text-sm text-slate-300 mt-1">Estatísticas e atividades recentes do catálogo</p>
         </div>
 
         <Link
           href="/admin/produtos/novo"
-          className="flex items-center gap-1.5 px-5 py-3 bg-brand-gold text-black font-sans text-xs font-bold uppercase tracking-wider rounded hover:opacity-90 transition-all duration-300"
+          className="flex items-center gap-2 px-5 py-3.5 bg-brand-gold text-black font-sans text-xs font-bold uppercase tracking-wider rounded hover:opacity-90 transition-all duration-300 shadow-md shadow-brand-gold/10"
         >
           <Plus className="w-4 h-4" />
           Cadastrar Produto
@@ -136,66 +136,66 @@ export default function AdminDashboardPage() {
       {loading ? (
         <div className="py-20 text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-brand-gold mx-auto" />
-          <p className="text-xs font-sans text-brand-silver mt-3">Carregando painel...</p>
+          <p className="text-sm font-sans text-slate-300 mt-3">Carregando painel...</p>
         </div>
       ) : (
         <>
           {/* STATS METRIC CARDS */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {/* CARD 1: PRODUCTS */}
-            <div className="p-6 bg-brand-black border border-white/5 rounded-lg flex items-center justify-between">
+            <div className="p-6 bg-brand-black border border-white/10 rounded-lg flex items-center justify-between">
               <div className="space-y-1">
-                <span className="text-[10px] font-sans text-brand-silver uppercase tracking-widest block">Total de Produtos</span>
+                <span className="text-xs font-sans text-slate-300 font-bold uppercase tracking-wider block">Total de Produtos</span>
                 <span className="text-3xl font-sans font-bold text-white block">{stats.totalProducts}</span>
               </div>
-              <div className="w-12 h-12 rounded bg-white/5 border border-white/10 flex items-center justify-center text-brand-gold">
+              <div className="w-12 h-12 rounded bg-white/5 border border-white/15 flex items-center justify-center text-brand-gold">
                 <Package className="w-6 h-6" />
               </div>
             </div>
 
             {/* CARD 2: CATEGORIES */}
-            <div className="p-6 bg-brand-black border border-white/5 rounded-lg flex items-center justify-between">
+            <div className="p-6 bg-brand-black border border-white/10 rounded-lg flex items-center justify-between">
               <div className="space-y-1">
-                <span className="text-[10px] font-sans text-brand-silver uppercase tracking-widest block">Categorias</span>
+                <span className="text-xs font-sans text-slate-300 font-bold uppercase tracking-wider block">Categorias</span>
                 <span className="text-3xl font-sans font-bold text-white block">{stats.totalCategories}</span>
               </div>
-              <div className="w-12 h-12 rounded bg-white/5 border border-white/10 flex items-center justify-center text-brand-gold">
+              <div className="w-12 h-12 rounded bg-white/5 border border-white/15 flex items-center justify-center text-brand-gold">
                 <Tag className="w-6 h-6" />
               </div>
             </div>
 
             {/* CARD 3: FEATURED */}
-            <div className="p-6 bg-brand-black border border-white/5 rounded-lg flex items-center justify-between">
+            <div className="p-6 bg-brand-black border border-white/10 rounded-lg flex items-center justify-between">
               <div className="space-y-1">
-                <span className="text-[10px] font-sans text-brand-silver uppercase tracking-widest block">Produtos em Destaque</span>
+                <span className="text-xs font-sans text-slate-300 font-bold uppercase tracking-wider block">Produtos em Destaque</span>
                 <span className="text-3xl font-sans font-bold text-white block">{stats.totalFeatured}</span>
               </div>
-              <div className="w-12 h-12 rounded bg-white/5 border border-white/10 flex items-center justify-center text-brand-gold">
+              <div className="w-12 h-12 rounded bg-white/5 border border-white/15 flex items-center justify-center text-brand-gold">
                 <Sparkles className="w-6 h-6" />
               </div>
             </div>
           </div>
 
           {/* RECENT ACTIVITY */}
-          <div className="p-6 bg-brand-black border border-white/5 rounded-lg">
-            <div className="flex justify-between items-center mb-6 pb-4 border-b border-white/5">
-              <h3 className="font-title text-sm text-white uppercase tracking-wider">Últimos Produtos Cadastrados</h3>
+          <div className="p-6 bg-brand-black border border-white/10 rounded-lg">
+            <div className="flex justify-between items-center mb-6 pb-4 border-b border-white/10">
+              <h3 className="font-title text-base text-white uppercase tracking-wider font-bold">Últimos Produtos Cadastrados</h3>
               <Link
                 href="/admin/produtos"
-                className="flex items-center gap-1 text-[11px] font-sans text-brand-gold tracking-widest uppercase hover:underline"
+                className="flex items-center gap-1.5 text-xs font-sans text-brand-gold tracking-wider uppercase font-bold hover:underline"
               >
                 Gerenciar Todos
-                <ArrowUpRight className="w-3.5 h-3.5" />
+                <ArrowUpRight className="w-4 h-4" />
               </Link>
             </div>
 
             {recentProducts.length === 0 ? (
-              <p className="text-xs font-sans text-brand-silver py-6">Nenhum produto cadastrado no momento.</p>
+              <p className="text-sm font-sans text-slate-300 py-6">Nenhum produto cadastrado no momento.</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-white/5 text-[10px] font-sans text-brand-silver uppercase tracking-wider">
+                    <tr className="border-b border-white/10 text-xs font-sans text-slate-300 uppercase tracking-wider font-bold">
                       <th className="py-4">Nome</th>
                       <th className="py-4">Categoria</th>
                       <th className="py-4">Preço</th>
@@ -203,15 +203,15 @@ export default function AdminDashboardPage() {
                       <th className="py-4">Data Cadastro</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/5 text-xs font-sans text-brand-white">
+                  <tbody className="divide-y divide-white/10 text-sm font-sans text-slate-200">
                     {recentProducts.map((product) => (
                       <tr key={product.id} className="hover:bg-white/5 transition-colors">
-                        <td className="py-4 font-medium text-white">{product.name}</td>
-                        <td className="py-4 text-brand-silver">{product.category_name}</td>
+                        <td className="py-4 font-semibold text-white">{product.name}</td>
+                        <td className="py-4 text-slate-300 font-medium">{product.category_name}</td>
                         <td className="py-4 font-bold">{formatPrice(product.price)}</td>
                         <td className="py-4">{getStatusLabel(product.status)}</td>
-                        <td className="py-4 text-brand-silver flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5 text-brand-gold" />
+                        <td className="py-4 text-slate-300 font-medium flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-brand-gold shrink-0" />
                           {new Date(product.created_at).toLocaleDateString('pt-BR')}
                         </td>
                       </tr>

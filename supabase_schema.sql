@@ -20,7 +20,7 @@ CREATE TABLE products (
     name TEXT NOT NULL,
     slug TEXT NOT NULL UNIQUE,
     description TEXT,
-    price NUMERIC(12, 2) NOT NULL,
+    price NUMERIC(12, 2),
     sale_price NUMERIC(12, 2),
     status TEXT NOT NULL DEFAULT 'in_stock' CONSTRAINT check_status CHECK (status IN ('in_stock', 'pre_order', 'on_request')),
     featured BOOLEAN DEFAULT false NOT NULL,
@@ -36,6 +36,7 @@ CREATE TABLE product_images (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     product_id UUID REFERENCES products(id) ON DELETE CASCADE NOT NULL,
     image_url TEXT NOT NULL,
+    display_order INTEGER DEFAULT 0 NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -141,3 +142,43 @@ INSERT INTO categories (name, slug) VALUES
 ('Acessórios', 'acessorios'),
 ('Novidades', 'novidades')
 ON CONFLICT (slug) DO NOTHING;
+
+-- 12. ATUALIZAÇÕES DE COLUNAS (MIGRAÇÃO DE BANCOS EXISTENTES)
+ALTER TABLE products ALTER COLUMN price DROP NOT NULL;
+ALTER TABLE product_images ADD COLUMN IF NOT EXISTS display_order INTEGER DEFAULT 0 NOT NULL;
+
+-- 13. TABELAS PARA CAMPANHAS PROMOCIONAIS
+CREATE TABLE IF NOT EXISTS campaigns (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  slug TEXT UNIQUE NOT NULL,
+  badge_label TEXT NOT NULL,
+  hero_subtitle TEXT,
+  hero_title TEXT,
+  banner_image_url TEXT,
+  start_date TIMESTAMPTZ NOT NULL,
+  end_date TIMESTAMPTZ NOT NULL,
+  is_active BOOLEAN DEFAULT true NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS campaign_products (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  campaign_id UUID REFERENCES campaigns(id) ON DELETE CASCADE NOT NULL,
+  product_id UUID REFERENCES products(id) ON DELETE CASCADE NOT NULL,
+  discount_percentage NUMERIC(5,2),
+  campaign_price NUMERIC(10,2),
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  UNIQUE(campaign_id, product_id)
+);
+
+-- RLS PARA CAMPANHAS
+ALTER TABLE campaigns ENABLE ROW LEVEL SECURITY;
+ALTER TABLE campaign_products ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Permitir leitura pública de campanhas" ON campaigns FOR SELECT USING (true);
+CREATE POLICY "Permitir leitura pública de produtos da campanha" ON campaign_products FOR SELECT USING (true);
+
+CREATE POLICY "Permitir gerencimento de campanhas para admins" ON campaigns FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Permitir gerencimento de produtos da campanha para admins" ON campaign_products FOR ALL TO authenticated USING (true) WITH CHECK (true);
+

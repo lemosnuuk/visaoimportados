@@ -52,10 +52,10 @@ export default function AdminCategoriasPage() {
     return text
       .toLowerCase()
       .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // remove accents
-      .replace(/[^a-z0-9\s-]/g, '') // remove invalid chars
-      .replace(/\s+/g, '-') // collapse whitespace and replace by -
-      .replace(/-+/g, '-') // collapse dashes
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
       .trim()
   }
 
@@ -151,37 +151,37 @@ export default function AdminCategoriasPage() {
   }
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-10">
       {/* HEADER */}
       <div>
         <h1 className="font-title text-2xl sm:text-3xl text-white uppercase tracking-wide">Categorias</h1>
-        <p className="font-sans text-xs text-brand-silver mt-1">Gerencie as categorias de importados disponíveis na vitrine</p>
+        <p className="font-sans text-sm text-slate-300 mt-1">Gerencie as categorias de importados disponíveis na vitrine</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 items-start">
         {/* ADD CATEGORY FORM */}
-        <div className="p-6 bg-brand-black border border-white/5 rounded-lg">
-          <h3 className="font-title text-xs text-white uppercase tracking-wider mb-6 flex items-center gap-2">
+        <div className="p-6 bg-brand-black border border-white/10 rounded-lg">
+          <h3 className="font-title text-sm text-white uppercase tracking-wider mb-6 flex items-center gap-2 font-bold">
             <Tag className="w-4 h-4 text-brand-gold" />
             Nova Categoria
           </h3>
-          <form onSubmit={handleAddCategory} className="space-y-4">
+          <form onSubmit={handleAddCategory} className="space-y-5">
             <div>
-              <label className="block text-[10px] font-sans text-brand-gold uppercase tracking-widest mb-2">Nome da Categoria</label>
+              <label className="block text-xs font-sans font-bold text-brand-gold uppercase tracking-wider mb-2">Nome da Categoria</label>
               <input
                 type="text"
                 required
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="Ex: Óculos de Sol, Relógios"
-                className="w-full bg-black border border-white/10 rounded px-4 py-3 text-xs font-sans focus:outline-none focus:border-brand-gold text-white"
+                className="w-full bg-black border border-white/15 rounded px-4 py-3 text-sm font-sans focus:outline-none focus:border-brand-gold text-white"
               />
             </div>
 
             <button
               type="submit"
               disabled={addLoading}
-              className="w-full flex items-center justify-center gap-1.5 py-3 bg-brand-gold text-black font-sans text-xs font-bold uppercase tracking-wider rounded hover:opacity-90 transition-all duration-300 disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 py-3.5 bg-brand-gold text-black font-sans text-xs font-bold uppercase tracking-wider rounded hover:opacity-90 transition-all duration-300 disabled:opacity-50 shadow-md shadow-brand-gold/10"
             >
               {addLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -194,43 +194,43 @@ export default function AdminCategoriasPage() {
         </div>
 
         {/* LIST TABLE */}
-        <div className="lg:col-span-2 p-6 bg-brand-black border border-white/5 rounded-lg">
-          <h3 className="font-title text-xs text-white uppercase tracking-wider mb-6">Categorias Cadastradas</h3>
+        <div className="lg:col-span-2 p-6 bg-brand-black border border-white/10 rounded-lg">
+          <h3 className="font-title text-sm text-white uppercase tracking-wider mb-6 font-bold">Categorias Cadastradas</h3>
 
           {loading ? (
             <div className="py-12 text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-brand-gold mx-auto" />
             </div>
           ) : categories.length === 0 ? (
-            <p className="text-xs font-sans text-brand-silver py-6">Nenhuma categoria cadastrada.</p>
+            <p className="text-sm font-sans text-slate-300 py-6">Nenhuma categoria cadastrada.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-white/5 text-[10px] font-sans text-brand-silver uppercase tracking-wider">
+                  <tr className="border-b border-white/10 text-xs font-sans font-bold text-slate-300 uppercase tracking-wider">
                     <th className="py-4">Nome</th>
                     <th className="py-4">Slug (URL Amigável)</th>
                     <th className="py-4 text-right">Ações</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5 text-xs font-sans text-brand-white">
+                <tbody className="divide-y divide-white/10 text-sm font-sans text-slate-200">
                   {categories.map((cat) => (
                     <tr key={cat.id} className="hover:bg-white/5 transition-colors">
-                      <td className="py-4 font-medium">
+                      <td className="py-4 font-semibold text-white">
                         {editingId === cat.id ? (
                           <input
                             type="text"
                             value={editName}
                             onChange={(e) => setEditName(e.target.value)}
-                            className="bg-black border border-white/20 rounded px-3 py-1.5 text-xs focus:outline-none focus:border-brand-gold text-white"
+                            className="bg-black border border-white/20 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-brand-gold text-white"
                           />
                         ) : (
                           cat.name
                         )}
                       </td>
-                      <td className="py-4 text-brand-silver">
+                      <td className="py-4 text-slate-300 font-mono">
                         {editingId === cat.id ? (
-                          <span className="text-[10px] italic">Gerado automaticamente</span>
+                          <span className="text-xs italic text-slate-400">Gerado automaticamente</span>
                         ) : (
                           cat.slug
                         )}
@@ -241,34 +241,34 @@ export default function AdminCategoriasPage() {
                             <button
                               onClick={() => handleSaveEdit(cat.id)}
                               disabled={editLoading}
-                              className="p-2 text-green-400 hover:text-green-300 bg-green-950/20 border border-green-500/20 hover:border-green-400/50 rounded"
+                              className="p-2 text-green-400 hover:text-green-300 bg-green-950/40 border border-green-500/30 rounded"
                               title="Salvar"
                             >
-                              {editLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                              {editLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                             </button>
                             <button
                               onClick={handleCancelEdit}
-                              className="p-2 text-brand-silver hover:text-white bg-white/5 border border-white/10 rounded"
+                              className="p-2 text-slate-300 hover:text-white bg-white/10 border border-white/15 rounded"
                               title="Cancelar"
                             >
-                              <X className="w-3.5 h-3.5" />
+                              <X className="w-4 h-4" />
                             </button>
                           </div>
                         ) : (
                           <div className="flex justify-end gap-2">
                             <button
                               onClick={() => handleStartEdit(cat)}
-                              className="p-2 text-brand-white hover:text-brand-gold bg-white/5 border border-white/10 hover:border-brand-gold/30 rounded transition-colors"
+                              className="p-2 text-white hover:text-brand-gold bg-white/5 border border-white/10 hover:border-brand-gold/40 rounded transition-colors"
                               title="Editar"
                             >
-                              <Edit2 className="w-3.5 h-3.5" />
+                              <Edit2 className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => handleDeleteCategory(cat.id, cat.name)}
-                              className="p-2 text-brand-silver hover:text-red-500 bg-white/5 border border-white/10 hover:border-red-500/20 rounded transition-colors"
+                              className="p-2 text-slate-300 hover:text-red-400 bg-white/5 border border-white/10 hover:border-red-500/30 rounded transition-colors"
                               title="Excluir"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         )}

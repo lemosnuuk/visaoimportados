@@ -411,24 +411,24 @@ export default function AdminMovimentacoesPage() {
       return (
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-white/[0.02] border border-white/5 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
-              <span className="text-[9px] font-sans text-brand-gold uppercase tracking-widest print:text-neutral-500">Total de Itens Cadastrados</span>
-              <span className="text-2xl font-title text-white font-bold mt-2 print:text-black">{totalCatalog}</span>
+            <div className="bg-white/[0.03] border border-white/10 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
+              <span className="text-xs font-sans font-bold text-brand-gold uppercase tracking-wider print:text-neutral-600">Total de Itens Cadastrados</span>
+              <span className="text-3xl font-title text-white font-bold mt-2 print:text-black">{totalCatalog}</span>
             </div>
-            <div className="bg-white/[0.02] border border-white/5 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
-              <span className="text-[9px] font-sans text-brand-gold uppercase tracking-widest print:text-neutral-500">Unidades Físicas em Estoque</span>
-              <span className="text-2xl font-title text-white font-bold mt-2 print:text-black">{totalStockItems} un</span>
+            <div className="bg-white/[0.03] border border-white/10 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
+              <span className="text-xs font-sans font-bold text-brand-gold uppercase tracking-wider print:text-neutral-600">Unidades Físicas em Estoque</span>
+              <span className="text-3xl font-title text-white font-bold mt-2 print:text-black">{totalStockItems} un</span>
             </div>
-            <div className="bg-white/[0.02] border border-white/5 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
-              <span className="text-[9px] font-sans text-brand-gold uppercase tracking-widest print:text-neutral-500">Valor Estimado do Inventário (Venda)</span>
-              <span className="text-2xl font-title text-brand-gold-light font-bold mt-2 print:text-black">{formatPrice(totalValuation)}</span>
+            <div className="bg-white/[0.03] border border-white/10 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
+              <span className="text-xs font-sans font-bold text-brand-gold uppercase tracking-wider print:text-neutral-600">Valor Estimado do Inventário (Venda)</span>
+              <span className="text-3xl font-title text-brand-gold-light font-bold mt-2 print:text-black">{formatPrice(totalValuation)}</span>
             </div>
           </div>
 
-          <div className="bg-black/35 border border-white/5 rounded-lg overflow-hidden print:border-neutral-200">
-            <table className="w-full text-left border-collapse text-xs print:text-black">
+          <div className="bg-black/50 border border-white/10 rounded-lg overflow-hidden print:border-neutral-200">
+            <table className="w-full text-left border-collapse text-sm print:text-black">
               <thead>
-                <tr className="border-b border-white/5 bg-white/[0.02] text-[10px] font-sans text-brand-silver uppercase tracking-wider print:border-neutral-200 print:text-neutral-600">
+                <tr className="border-b border-white/10 bg-white/[0.03] text-xs font-sans font-bold text-slate-300 uppercase tracking-wider print:border-neutral-200 print:text-neutral-800">
                   <th className="p-4">Marca</th>
                   <th className="p-4">Produto</th>
                   <th className="p-4">Categoria</th>
@@ -437,21 +437,21 @@ export default function AdminMovimentacoesPage() {
                   <th className="p-4 text-right">Total Estimado</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5 print:divide-neutral-200">
+              <tbody className="divide-y divide-white/10 print:divide-neutral-200 text-slate-200">
                 {products.map((p) => {
                   const stock = p.stock_quantity || 0
                   const category = p.categories 
                     ? (Array.isArray(p.categories) ? p.categories[0]?.name : p.categories.name) || 'Sem Categoria'
                     : 'Sem Categoria'
-                  const total = stock * p.price
+                  const total = p.price ? stock * p.price : 0
                   return (
-                    <tr key={p.id} className="hover:bg-white/[0.01] print:hover:bg-transparent">
+                    <tr key={p.id} className="hover:bg-white/[0.02] print:hover:bg-transparent">
                       <td className="p-4 font-mono font-bold text-brand-gold print:text-neutral-700">{p.brand || '-'}</td>
-                      <td className="p-4 text-white font-medium print:text-black">{p.name}</td>
-                      <td className="p-4 text-brand-silver print:text-neutral-500">{category}</td>
+                      <td className="p-4 text-white font-semibold print:text-black">{p.name}</td>
+                      <td className="p-4 text-slate-300 font-medium print:text-neutral-600">{category}</td>
                       <td className="p-4 text-center font-mono font-bold text-white print:text-black">{stock} un</td>
-                      <td className="p-4 text-right font-mono print:text-neutral-700">{formatPrice(p.price)}</td>
-                      <td className="p-4 text-right font-mono text-brand-gold-light font-semibold print:text-black">{formatPrice(total)}</td>
+                      <td className="p-4 text-right font-mono text-white font-medium print:text-neutral-700">{p.price ? formatPrice(p.price) : 'Sob Consulta'}</td>
+                      <td className="p-4 text-right font-mono text-brand-gold-light font-bold print:text-black">{p.price ? formatPrice(total) : 'Sob Consulta'}</td>
                     </tr>
                   )
                 })}
@@ -473,31 +473,31 @@ export default function AdminMovimentacoesPage() {
       return (
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-            <div className="bg-white/[0.02] border border-white/5 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
-              <span className="text-[9px] font-sans text-brand-gold uppercase tracking-widest print:text-neutral-500">Transações de Venda</span>
-              <span className="text-2xl font-title text-white font-bold mt-2 print:text-black">{totalSales}</span>
+            <div className="bg-white/[0.03] border border-white/10 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
+              <span className="text-xs font-sans font-bold text-brand-gold uppercase tracking-wider print:text-neutral-600">Transações de Venda</span>
+              <span className="text-3xl font-title text-white font-bold mt-2 print:text-black">{totalSales}</span>
             </div>
-            <div className="bg-white/[0.02] border border-white/5 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
-              <span className="text-[9px] font-sans text-brand-gold uppercase tracking-widest print:text-neutral-500">Unidades Vendidas</span>
-              <span className="text-2xl font-title text-white font-bold mt-2 print:text-black">{totalItemsSold} un</span>
+            <div className="bg-white/[0.03] border border-white/10 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
+              <span className="text-xs font-sans font-bold text-brand-gold uppercase tracking-wider print:text-neutral-600">Unidades Vendidas</span>
+              <span className="text-3xl font-title text-white font-bold mt-2 print:text-black">{totalItemsSold} un</span>
             </div>
-            <div className="bg-white/[0.02] border border-white/5 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
-              <span className="text-[9px] font-sans text-brand-gold uppercase tracking-widest print:text-neutral-500">Faturamento Bruto</span>
-              <span className="text-2xl font-title text-brand-gold-light font-bold mt-2 print:text-black">{formatPrice(totalRevenue)}</span>
+            <div className="bg-white/[0.03] border border-white/10 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
+              <span className="text-xs font-sans font-bold text-brand-gold uppercase tracking-wider print:text-neutral-600">Faturamento Bruto</span>
+              <span className="text-3xl font-title text-brand-gold-light font-bold mt-2 print:text-black">{formatPrice(totalRevenue)}</span>
             </div>
-            <div className="bg-white/[0.02] border border-white/5 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
-              <span className="text-[9px] font-sans text-brand-gold uppercase tracking-widest print:text-neutral-500">À Vista / Parcelado</span>
-              <span className="text-xs text-white font-bold mt-3 print:text-black block">
+            <div className="bg-white/[0.03] border border-white/10 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
+              <span className="text-xs font-sans font-bold text-brand-gold uppercase tracking-wider print:text-neutral-600">À Vista / Parcelado</span>
+              <span className="text-sm text-white font-bold mt-2 print:text-black block">
                 V: {formatPrice(totalVista)} <br/>
                 P: {formatPrice(totalParcelado)}
               </span>
             </div>
           </div>
 
-          <div className="bg-black/35 border border-white/5 rounded-lg overflow-hidden print:border-neutral-200">
-            <table className="w-full text-left border-collapse text-xs print:text-black">
+          <div className="bg-black/50 border border-white/10 rounded-lg overflow-hidden print:border-neutral-200">
+            <table className="w-full text-left border-collapse text-sm print:text-black">
               <thead>
-                <tr className="border-b border-white/5 bg-white/[0.02] text-[10px] font-sans text-brand-silver uppercase tracking-wider print:border-neutral-200 print:text-neutral-600">
+                <tr className="border-b border-white/10 bg-white/[0.03] text-xs font-sans font-bold text-slate-300 uppercase tracking-wider print:border-neutral-200 print:text-neutral-800">
                   <th className="p-4">Data</th>
                   <th className="p-4">Produto</th>
                   <th className="p-4 text-center">Qtd.</th>
@@ -508,25 +508,31 @@ export default function AdminMovimentacoesPage() {
                   <th className="p-4">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5 print:divide-neutral-200">
+              <tbody className="divide-y divide-white/10 print:divide-neutral-200 text-slate-200">
                 {salesMovements.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="p-8 text-center text-brand-silver print:text-black">Nenhuma venda registrada no período.</td>
+                    <td colSpan={8} className="p-8 text-center text-slate-300 print:text-black font-medium">Nenhuma venda registrada no período.</td>
                   </tr>
                 ) : (
                   salesMovements.map((m) => {
                     const total = m.quantity * (m.sale_price || 0)
                     return (
-                      <tr key={m.id} className="hover:bg-white/[0.01] print:hover:bg-transparent">
-                        <td className="p-4 font-mono text-brand-silver print:text-neutral-600">{new Date(m.movement_date).toLocaleDateString('pt-BR')}</td>
-                        <td className="p-4 text-white font-medium print:text-black">{m.products?.name || 'Produto Excluído'}</td>
-                        <td className="p-4 text-center font-mono print:text-black">{m.quantity} un</td>
-                        <td className="p-4 text-right font-mono print:text-neutral-600">{formatPrice(m.sale_price)}</td>
-                        <td className="p-4 text-right font-mono text-white font-semibold print:text-black">{formatPrice(total)}</td>
-                        <td className="p-4 text-brand-silver print:text-neutral-700">{m.customer_name || '-'}</td>
-                        <td className="p-4 text-brand-silver uppercase print:text-neutral-700 text-[10px]">{m.payment_type === 'vista' ? 'À Vista' : 'Parcelado'}</td>
-                        <td className="p-4 text-[10px] print:text-black">
-                          <span className={`font-bold uppercase ${m.payment_status === 'pago' ? 'text-green-400' : m.payment_status === 'parcialmente_pago' ? 'text-amber-400' : 'text-red-400'}`}>
+                      <tr key={m.id} className="hover:bg-white/[0.02] print:hover:bg-transparent">
+                        <td className="p-4 font-mono font-medium text-slate-300 print:text-neutral-700">{new Date(m.movement_date).toLocaleDateString('pt-BR')}</td>
+                        <td className="p-4 text-white font-semibold print:text-black">{m.products?.name || 'Produto Excluído'}</td>
+                        <td className="p-4 text-center font-mono font-bold print:text-black">{m.quantity} un</td>
+                        <td className="p-4 text-right font-mono font-medium print:text-neutral-700">{formatPrice(m.sale_price)}</td>
+                        <td className="p-4 text-right font-mono text-white font-bold print:text-black">{formatPrice(total)}</td>
+                        <td className="p-4 text-slate-300 font-medium print:text-neutral-700">{m.customer_name || '-'}</td>
+                        <td className="p-4 text-slate-300 font-bold uppercase print:text-neutral-700 text-xs">{m.payment_type === 'vista' ? 'À Vista' : 'Parcelado'}</td>
+                        <td className="p-4 text-xs print:text-black">
+                          <span className={`font-bold uppercase px-2 py-0.5 rounded border ${
+                            m.payment_status === 'pago' 
+                              ? 'text-green-400 bg-green-950/50 border-green-500/20' 
+                              : m.payment_status === 'parcialmente_pago' 
+                                ? 'text-amber-400 bg-amber-950/50 border-amber-500/20' 
+                                : 'text-red-400 bg-red-950/50 border-red-500/20'
+                          }`}>
                             {m.payment_status}
                           </span>
                         </td>
@@ -900,11 +906,11 @@ export default function AdminMovimentacoesPage() {
           <p className="text-xs font-sans text-brand-silver">Nenhuma movimentação registrada.</p>
         </div>
       ) : (
-        <div className="bg-brand-black border border-white/5 rounded-lg p-6 print:hidden">
+        <div className="bg-brand-black border border-white/10 rounded-lg p-6 print:hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-white/5 text-[10px] font-sans text-brand-silver uppercase tracking-wider">
+                <tr className="border-b border-white/10 text-xs font-sans font-bold text-slate-300 uppercase tracking-wider">
                   <th className="py-4">Data</th>
                   <th className="py-4">Tipo</th>
                   <th className="py-4">Produto</th>
@@ -917,7 +923,7 @@ export default function AdminMovimentacoesPage() {
                   <th className="py-4 text-right">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5 text-xs font-sans text-brand-white">
+              <tbody className="divide-y divide-white/10 text-sm font-sans text-slate-200">
                 {filteredAndSortedMovements.map((m) => (
                   <tr key={m.id} className="hover:bg-white/5 transition-colors">
                     {/* Data */}

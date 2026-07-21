@@ -8,18 +8,17 @@ interface PageProps {
   params: Promise<{ slug: string }>
 }
 
-
 async function getProduct(slug: string) {
   try {
     const supabase = await createClient()
     
-    // Fetch product details
+    // Fetch product details with images ordered by display_order
     const { data: product, error } = await supabase
       .from('products')
       .select(`
         id, name, brand, slug, description, price, sale_price, status, featured, display_order, category_id,
         categories(id, name, slug),
-        product_images(image_url)
+        product_images(image_url, display_order)
       `)
       .eq('slug', slug)
       .single()
@@ -28,9 +27,35 @@ async function getProduct(slug: string) {
       return null
     }
 
-    const images = product.product_images && product.product_images.length > 0
-      ? product.product_images.map((img: any) => img.image_url)
-      : ['https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=600&auto=format&fit=crop&q=80']
+    let sortedImages: string[] = []
+    if (product.product_images && product.product_images.length > 0) {
+      const sorted = [...product.product_images].sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0))
+      sortedImages = sorted.map((img: any) => img.image_url)
+    } else {
+      sortedImages = ['https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=600&auto=format&fit=crop&q=80']
+    }
+
+    let effectiveSalePrice = product.sale_price !== null && product.sale_price !== undefined ? Number(product.sale_price) : null
+    const nowIso = new Date().toISOString()
+
+    // Check if product belongs to an active campaign currently running
+    const { data: dbCamp } = await supabase
+      .from('campaign_products')
+      .select(`
+        campaign_price,
+        campaigns!inner(is_active, start_date, end_date, badge_label)
+      `)
+      .eq('product_id', product.id)
+      .eq('campaigns.is_active', true)
+      .lte('campaigns.start_date', nowIso)
+      .gte('campaigns.end_date', nowIso)
+      .maybeSingle()
+
+    let isCampaign = false
+    if (dbCamp && dbCamp.campaign_price) {
+      effectiveSalePrice = Number(dbCamp.campaign_price)
+      isCampaign = true
+    }
 
     return {
       id: product.id,
@@ -38,8 +63,9 @@ async function getProduct(slug: string) {
       brand: product.brand || null,
       slug: product.slug,
       description: product.description || '',
-      price: Number(product.price),
-      sale_price: product.sale_price ? Number(product.sale_price) : null,
+      price: product.price !== null && product.price !== undefined ? Number(product.price) : null,
+      sale_price: effectiveSalePrice,
+      is_campaign: isCampaign,
       status: product.status as any,
       featured: product.featured,
       display_order: product.display_order,
@@ -51,11 +77,11 @@ async function getProduct(slug: string) {
         ? (product.categories[0] as any)?.slug || 'importados'
         : (product.categories as any)?.slug || 'importados',
 
-      image_url: images[0],
-      images
+      image_url: sortedImages[0],
+      images: sortedImages
     }
   } catch (err) {
-    console.error('Error fetching product from Supabase, using mock.', err)
+    console.error('Error fetching product from Supabase.', err)
     return null
   }
 }
@@ -107,7 +133,7 @@ export default async function ProductPage({ params }: PageProps) {
     description: product.description,
     offers: {
       '@type': 'Offer',
-      price: product.sale_price || product.price,
+      price: (product.sale_price || product.price) ?? 0,
       priceCurrency: 'BRL',
       availability: 
         product.status === 'in_stock' 

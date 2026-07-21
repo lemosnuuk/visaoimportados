@@ -116,7 +116,7 @@ export default function CartPage() {
                           {item.name}
                         </h3>
                         <span className="text-[10px] font-sans text-brand-gold mt-1 block">
-                          {item.status === 'on_request' ? 'Importação sob Consulta' : formatPrice(item.sale_price ?? item.price)}
+                          {item.status === 'on_request' || !item.price ? 'Sob Consulta' : formatPrice(item.sale_price ?? item.price)}
                         </span>
                       </div>
                     </div>

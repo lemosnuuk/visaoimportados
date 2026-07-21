@@ -21,7 +21,7 @@ interface Product {
   name: string
   brand: string | null
   slug: string
-  price: number
+  price: number | null
   sale_price: number | null
   status: string
   featured: boolean
@@ -61,28 +61,30 @@ export default function AdminProdutosPage() {
         .order('name')
       if (dbCats) setCategories(dbCats)
 
-      // 2. Fetch products with first image
+      // 2. Fetch products with first image ordered by display_order
       const { data: dbProds } = await supabase
         .from('products')
         .select(`
           id, name, brand, slug, price, sale_price, status, featured, display_order, stock_quantity,
           categories(name),
-          product_images(image_url)
+          product_images(image_url, display_order)
         `)
         .order('display_order', { ascending: true })
 
       if (dbProds) {
         const formatted = dbProds.map((p: any) => {
-          const imgUrl = p.product_images && p.product_images.length > 0
-            ? p.product_images[0].image_url
-            : null
+          let imgUrl: string | null = null
+          if (p.product_images && p.product_images.length > 0) {
+            const sorted = [...p.product_images].sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0))
+            imgUrl = sorted[0].image_url
+          }
           return {
             id: p.id,
             name: p.name,
             brand: p.brand || null,
             slug: p.slug,
-            price: Number(p.price),
-            sale_price: p.sale_price ? Number(p.sale_price) : null,
+            price: p.price !== null && p.price !== undefined ? Number(p.price) : null,
+            sale_price: p.sale_price !== null && p.sale_price !== undefined ? Number(p.sale_price) : null,
             status: p.status,
             featured: p.featured,
             display_order: p.display_order,
@@ -100,12 +102,11 @@ export default function AdminProdutosPage() {
     }
   }
 
-  // Delete product action (including cascading images in DB)
+  // Delete product action
   const handleDeleteProduct = async (id: string, name: string) => {
     if (!confirm(`Deseja realmente excluir permanentemente o produto "${name}"?\nEsta ação não poderá ser desfeita.`)) return
 
     try {
-      // RLS enables authenticated users to delete
       const { error } = await supabase
         .from('products')
         .delete()
@@ -144,7 +145,8 @@ export default function AdminProdutosPage() {
   }
 
   // Format Price
-  const formatPrice = (price: number) => {
+  const formatPrice = (price: number | null) => {
+    if (price === null || price === undefined) return 'Sob Consulta'
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
@@ -162,28 +164,28 @@ export default function AdminProdutosPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'in_stock':
-        return <span className="px-2.5 py-0.5 text-[9px] font-sans font-bold uppercase text-green-400 bg-green-950/45 border border-green-500/25 rounded">Estoque</span>
+        return <span className="px-3 py-1 text-xs font-sans font-bold uppercase text-green-400 bg-green-950/70 border border-green-500/30 rounded">Estoque</span>
       case 'pre_order':
-        return <span className="px-2.5 py-0.5 text-[9px] font-sans font-bold uppercase text-amber-400 bg-amber-950/45 border border-amber-500/25 rounded">Encomenda</span>
+        return <span className="px-3 py-1 text-xs font-sans font-bold uppercase text-amber-400 bg-amber-950/70 border border-amber-500/30 rounded">Encomenda</span>
       case 'on_request':
-        return <span className="px-2.5 py-0.5 text-[9px] font-sans font-bold uppercase text-blue-400 bg-blue-950/45 border border-blue-500/25 rounded">Consulta</span>
+        return <span className="px-3 py-1 text-xs font-sans font-bold uppercase text-blue-400 bg-blue-950/70 border border-blue-500/30 rounded">Consulta</span>
       default:
-        return <span className="px-2.5 py-0.5 text-[9px] font-sans font-bold uppercase text-brand-silver bg-white/5 border border-white/10 rounded">{status}</span>
+        return <span className="px-3 py-1 text-xs font-sans font-bold uppercase text-slate-300 bg-white/10 border border-white/15 rounded">{status}</span>
     }
   }
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-10">
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
         <div>
           <h1 className="font-title text-2xl sm:text-3xl text-white uppercase tracking-wide">Produtos</h1>
-          <p className="font-sans text-xs text-brand-silver mt-1">Cadastre, edite e exclua os itens expostos em seu catálogo</p>
+          <p className="font-sans text-sm text-slate-300 mt-1">Cadastre, edite e organize os itens do catálogo</p>
         </div>
 
         <Link
           href="/admin/produtos/novo"
-          className="flex items-center gap-1.5 px-5 py-3 bg-brand-gold text-black font-sans text-xs font-bold uppercase tracking-wider rounded hover:opacity-90 transition-all duration-300"
+          className="flex items-center gap-2 px-5 py-3.5 bg-brand-gold text-black font-sans text-xs font-bold uppercase tracking-wider rounded hover:opacity-90 transition-all duration-300 shadow-md shadow-brand-gold/10"
         >
           <Plus className="w-4 h-4" />
           Novo Produto
@@ -194,13 +196,13 @@ export default function AdminProdutosPage() {
       <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center justify-between">
         {/* Search */}
         <div className="relative flex-grow max-w-xl">
-          <Search className="w-4 h-4 text-brand-silver absolute left-4 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Buscar produto pelo nome..."
+            placeholder="Buscar produto pelo nome ou marca..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-brand-black border border-white/10 rounded px-11 py-3 text-xs font-sans focus:outline-none focus:border-brand-gold text-white"
+            className="w-full bg-brand-black border border-white/15 rounded px-11 py-3 text-sm font-sans focus:outline-none focus:border-brand-gold text-white"
           />
         </div>
 
@@ -210,7 +212,7 @@ export default function AdminProdutosPage() {
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="bg-brand-black border border-white/10 text-xs font-sans text-white rounded px-4 py-3 focus:outline-none focus:border-brand-gold cursor-pointer min-w-44"
+            className="bg-brand-black border border-white/15 text-sm font-sans text-white rounded px-4 py-3 focus:outline-none focus:border-brand-gold cursor-pointer min-w-48"
           >
             <option value="all">Todas as Categorias</option>
             {categories.map((c) => (
@@ -226,18 +228,18 @@ export default function AdminProdutosPage() {
       {loading ? (
         <div className="py-20 text-center">
           <Loader2 className="w-8 h-8 animate-spin text-brand-gold mx-auto" />
-          <p className="text-xs font-sans text-brand-silver mt-3">Buscando curadoria de produtos...</p>
+          <p className="text-sm font-sans text-slate-300 mt-3">Carregando lista de produtos...</p>
         </div>
       ) : filteredProducts.length === 0 ? (
-        <div className="p-12 text-center border border-dashed border-white/5 rounded">
-          <p className="text-xs font-sans text-brand-silver">Nenhum produto cadastrado com essas especificações.</p>
+        <div className="p-12 text-center border border-dashed border-white/10 rounded-lg">
+          <p className="text-sm font-sans text-slate-300">Nenhum produto cadastrado com essas especificações.</p>
         </div>
       ) : (
-        <div className="bg-brand-black border border-white/5 rounded-lg p-6">
+        <div className="bg-brand-black border border-white/10 rounded-lg p-6">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-white/5 text-[10px] font-sans text-brand-silver uppercase tracking-wider">
+                <tr className="border-b border-white/10 text-xs font-sans text-slate-300 uppercase tracking-wider font-bold">
                   <th className="py-4 w-16">Foto</th>
                   <th className="py-4">Produto</th>
                   <th className="py-4">Categoria</th>
@@ -250,12 +252,12 @@ export default function AdminProdutosPage() {
                   <th className="py-4 text-right">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5 text-xs font-sans text-brand-white">
+              <tbody className="divide-y divide-white/10 text-sm font-sans text-slate-200">
                 {filteredProducts.map((p) => (
                   <tr key={p.id} className="hover:bg-white/5 transition-colors">
                     {/* Thumbnail */}
                     <td className="py-4">
-                      <div className="relative w-10 h-10 rounded overflow-hidden border border-white/5 bg-black flex items-center justify-center">
+                      <div className="relative w-12 h-12 rounded border border-white/15 bg-black flex items-center justify-center overflow-hidden">
                         {p.image_url ? (
                           <Image
                             src={p.image_url}
@@ -264,22 +266,28 @@ export default function AdminProdutosPage() {
                             className="object-cover"
                           />
                         ) : (
-                          <ImageIcon className="w-4 h-4 text-brand-silver" />
+                          <ImageIcon className="w-5 h-5 text-slate-400" />
                         )}
                       </div>
                     </td>
 
                     {/* Name */}
                     <td className="py-4 font-semibold text-white max-w-sm truncate pr-4">
-                      {p.brand && <span className="block text-[10px] font-normal text-brand-gold uppercase tracking-wider mb-0.5">{p.brand}</span>}
+                      {p.brand && <span className="block text-xs font-bold text-brand-gold uppercase tracking-wider mb-0.5">{p.brand}</span>}
                       {p.name}
                     </td>
 
                     {/* Category */}
-                    <td className="py-4 text-brand-silver">{p.category_name}</td>
+                    <td className="py-4 text-slate-300 font-medium">{p.category_name}</td>
 
                     {/* Base Price */}
-                    <td className="py-4 font-medium">{formatPrice(p.price)}</td>
+                    <td className="py-4 font-semibold">
+                      {p.price === null ? (
+                        <span className="text-xs text-brand-gold-light font-bold uppercase">Sob Consulta</span>
+                      ) : (
+                        formatPrice(p.price)
+                      )}
+                    </td>
 
                     {/* Sale Price */}
                     <td className="py-4 text-brand-gold-light font-bold">
@@ -292,7 +300,7 @@ export default function AdminProdutosPage() {
                     </td>
 
                     {/* Display Order */}
-                    <td className="py-4 font-mono text-brand-silver">{p.display_order}</td>
+                    <td className="py-4 font-mono text-slate-300 font-bold">{p.display_order}</td>
 
                     {/* Status */}
                     <td className="py-4">{getStatusBadge(p.status)}</td>
@@ -301,10 +309,10 @@ export default function AdminProdutosPage() {
                     <td className="py-4">
                       <button
                         onClick={() => handleToggleFeatured(p.id, p.featured)}
-                        className={`p-1.5 rounded border transition-colors ${
+                        className={`p-2 rounded border transition-colors ${
                           p.featured
-                            ? 'text-brand-gold border-brand-gold/30 hover:border-brand-gold bg-brand-gold/5'
-                            : 'text-brand-silver border-white/5 hover:border-white/20'
+                            ? 'text-brand-gold border-brand-gold/40 hover:border-brand-gold bg-brand-gold/10'
+                            : 'text-slate-400 border-white/10 hover:border-white/30'
                         }`}
                         title={p.featured ? 'Remover destaque' : 'Tornar destaque'}
                       >
@@ -317,17 +325,17 @@ export default function AdminProdutosPage() {
                       <div className="flex justify-end gap-2">
                         <Link
                           href={`/admin/produtos/editar/${p.id}`}
-                          className="p-2 text-brand-white hover:text-brand-gold bg-white/5 border border-white/10 hover:border-brand-gold/30 rounded transition-colors inline-block"
+                          className="p-2.5 text-white hover:text-brand-gold bg-white/5 border border-white/15 hover:border-brand-gold/40 rounded transition-colors inline-block"
                           title="Editar"
                         >
-                          <Edit2 className="w-3.5 h-3.5" />
+                          <Edit2 className="w-4 h-4" />
                         </Link>
                         <button
                           onClick={() => handleDeleteProduct(p.id, p.name)}
-                          className="p-2 text-brand-silver hover:text-red-500 bg-white/5 border border-white/10 hover:border-red-500/20 rounded transition-colors"
+                          className="p-2.5 text-slate-400 hover:text-red-400 bg-white/5 border border-white/15 hover:border-red-500/30 rounded transition-colors"
                           title="Excluir"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>

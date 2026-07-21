@@ -25,7 +25,8 @@ import {
   Globe,
   Search,
   Compass,
-  ShoppingBag
+  ShoppingBag,
+  Camera
 } from 'lucide-react'
 
 // Define Types
@@ -35,13 +36,15 @@ interface Product {
   brand?: string | null
   slug: string
   description: string
-  price: number
+  price: number | null
   sale_price: number | null
   status: 'in_stock' | 'pre_order' | 'on_request'
   featured: boolean
   display_order: number
   category_name?: string
   image_url: string
+  is_campaign?: boolean
+  campaign_badge?: string | null
 }
 
 interface Category {
@@ -197,6 +200,10 @@ export default function Home() {
   const [contatoEmail, setContatoEmail] = useState('')
   const [contatoMensagem, setContatoMensagem] = useState('')
 
+  // Campaign State
+  const [activeCampaign, setActiveCampaign] = useState<any>(null)
+  const [campaignProductsMap, setCampaignProductsMap] = useState<Record<string, { price: number; badge: string }>>({})
+
   // Scroll Parallax variables
   const { scrollY } = useScroll()
   const yBg = useTransform(scrollY, [0, 600], [0, 200])
@@ -207,7 +214,41 @@ export default function Home() {
     async function loadData() {
       try {
         const supabase = createClient()
-        
+        const nowIso = new Date().toISOString()
+
+        let activeCamp: any = null
+        let cMap: Record<string, { price: number; badge: string }> = {}
+
+        // 0. Fetch active campaign
+        const { data: dbCampaigns } = await supabase
+          .from('campaigns')
+          .select(`
+            *,
+            campaign_products(product_id, discount_percentage, campaign_price)
+          `)
+          .eq('is_active', true)
+          .lte('start_date', nowIso)
+          .gte('end_date', nowIso)
+          .order('created_at', { ascending: false })
+          .limit(1)
+
+        if (dbCampaigns && dbCampaigns.length > 0) {
+          activeCamp = dbCampaigns[0]
+          if (activeCamp.campaign_products) {
+            activeCamp.campaign_products.forEach((cp: any) => {
+              if (cp.campaign_price) {
+                cMap[cp.product_id] = {
+                  price: Number(cp.campaign_price),
+                  badge: activeCamp.badge_label
+                }
+              }
+            })
+          }
+        }
+
+        setActiveCampaign(activeCamp)
+        setCampaignProductsMap(cMap)
+
         // 1. Fetch Categories
         const { data: dbCategories, error: catError } = await supabase
           .from('categories')
@@ -220,7 +261,7 @@ export default function Home() {
           .select(`
             id, name, brand, slug, description, price, sale_price, status, featured, display_order,
             categories(name),
-            product_images(image_url)
+            product_images(image_url, display_order)
           `)
           .eq('featured', true)
           .order('display_order', { ascending: true })
@@ -233,22 +274,37 @@ export default function Home() {
 
         if (dbProducts && dbProducts.length > 0) {
           const formattedProducts = dbProducts.map((p: any) => {
-            const imgUrl = p.product_images && p.product_images.length > 0
-              ? p.product_images[0].image_url
-              : 'https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=600&auto=format&fit=crop&q=80'
+            let imgUrl = 'https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=600&auto=format&fit=crop&q=80'
+            if (p.product_images && p.product_images.length > 0) {
+              const sorted = [...p.product_images].sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0))
+              imgUrl = sorted[0].image_url
+            }
+
+            const basePrice = p.price !== null && p.price !== undefined ? Number(p.price) : null
+            let effectiveSalePrice: number | null = p.sale_price !== null && p.sale_price !== undefined ? Number(p.sale_price) : null
+            let campBadge: string | null = null
+
+            // Override with campaign price ONLY if product is currently in an active running campaign
+            if (cMap[p.id]) {
+              effectiveSalePrice = cMap[p.id].price
+              campBadge = cMap[p.id].badge
+            }
+
             return {
               id: p.id,
               name: p.name,
               brand: p.brand || null,
               slug: p.slug,
               description: p.description || '',
-              price: Number(p.price),
-              sale_price: p.sale_price ? Number(p.sale_price) : null,
+              price: basePrice,
+              sale_price: effectiveSalePrice,
               status: p.status as any,
               featured: p.featured,
               display_order: p.display_order,
               category_name: p.categories?.name || 'Importados',
-              image_url: imgUrl
+              image_url: imgUrl,
+              is_campaign: !!cMap[p.id],
+              campaign_badge: campBadge
             }
           })
           setFeaturedProducts(formattedProducts)
@@ -322,12 +378,28 @@ export default function Home() {
     }
   }
 
-  const formatPrice = (price: number) => {
+  const formatPrice = (price: number | null) => {
+    if (price === null || price === undefined) return 'Sob Consulta'
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
     }).format(price)
   }
+
+  const dynamicHeroColumns = [
+    heroColumns[0],
+    activeCampaign
+      ? {
+          title: activeCampaign.hero_title || activeCampaign.name,
+          subtitle: activeCampaign.hero_subtitle || activeCampaign.badge_label || 'OFERTA ESPECIAL',
+          description: `Aproveite as ofertas exclusivas da campanha ${activeCampaign.name}. Produtos selecionados por tempo limitado!`,
+          bgImage: activeCampaign.banner_image_url || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=1200&auto=format&fit=crop&q=80',
+          buttonText: 'Ver Promoção',
+          link: `/catalogo?campanha=${activeCampaign.slug}`
+        }
+      : heroColumns[1],
+    heroColumns[2]
+  ]
 
   return (
     <>
@@ -339,7 +411,7 @@ export default function Home() {
         {/* Decorative Grid Overlay */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff01_1px,transparent_1px),linear-gradient(to_bottom,#ffffff01_1px,transparent_1px)] bg-[size:6rem_6rem] z-10 pointer-events-none" />
 
-        {heroColumns.map((col, index) => {
+        {dynamicHeroColumns.map((col, index) => {
           const isHovered = hoveredIndex === index;
           const isAnyHovered = hoveredIndex !== null;
 
@@ -657,15 +729,34 @@ export default function Home() {
                       src={product.image_url}
                       alt={product.name}
                       fill
-                      className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+                      className="object-contain p-4 group-hover:scale-105 transition-transform duration-700 ease-out"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                     <div className="absolute top-4 left-4 z-10">
                       {renderStatusBadge(product.status)}
                     </div>
+                    {product.is_campaign && (
+                      <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-1.5">
+                        <div className="bg-gradient-to-r from-amber-400 to-amber-500 text-black font-sans font-black text-[10px] uppercase px-2.5 py-1 rounded shadow-lg shadow-amber-500/20 tracking-wider flex items-center gap-1">
+                          <Sparkles className="w-3 h-3 text-black animate-pulse" />
+                          {product.campaign_badge || 'Campanha Ativa'}
+                        </div>
+                        {product.price && product.sale_price && product.sale_price < product.price && (
+                          <div className="bg-brand-gold text-black font-sans font-black text-xs uppercase px-2.5 py-1 rounded shadow-lg shadow-brand-gold/20 tracking-wider">
+                            -{Math.round(((product.price - product.sale_price) / product.price) * 100)}% OFF
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </Link>
 
                   <div className="p-6 flex flex-col flex-grow bg-gradient-to-b from-brand-black to-black/90">
+                    {product.is_campaign && (
+                      <span className="inline-flex items-center gap-1 text-[9px] font-sans font-black text-amber-400 uppercase tracking-widest bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded mb-2 w-fit">
+                        <Sparkles className="w-3 h-3 text-amber-400" />
+                        {product.campaign_badge || 'Oferta de Campanha'}
+                      </span>
+                    )}
                     <span className="text-[9px] font-sans text-brand-gold uppercase tracking-widest mb-1.5 font-bold">
                       {product.category_name} {product.brand && `• ${product.brand}`}
                     </span>
@@ -680,31 +771,34 @@ export default function Home() {
 
                     <div className="mt-auto flex items-center justify-between pt-5 border-t border-white/5">
                       <div className="flex flex-col justify-center">
-                        {product.sale_price ? (
+                        {product.price === null || product.status === 'on_request' || (product.status === 'pre_order' && product.price === null) ? (
+                          <span className="text-xs font-title font-bold text-brand-gold-light uppercase tracking-widest block py-1">
+                            Sob Consulta
+                          </span>
+                        ) : product.sale_price ? (
                           <div className="space-y-0.5">
-                            <span className="text-[10px] font-sans text-brand-silver line-through block leading-none">
-                              {formatPrice(product.price)}
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] font-sans text-brand-silver line-through block leading-none">
+                                {formatPrice(product.price)}
+                              </span>
+                              {product.is_campaign && product.price && product.sale_price < product.price && (
+                                <span className="text-[9px] font-sans font-bold text-red-400 bg-red-950/60 border border-red-500/30 px-1 py-0.2 rounded">
+                                  -{Math.round(((product.price - product.sale_price) / product.price) * 100)}%
+                                </span>
+                              )}
+                            </div>
                             <span className="text-xl font-title font-black text-brand-gold-light tracking-tight block">
                               {formatPrice(product.sale_price)}
                             </span>
                           </div>
                         ) : (
                           <div className="space-y-0.5">
-                            {product.status === 'on_request' ? (
-                              <span className="text-xs font-title font-bold text-brand-silver uppercase tracking-widest block py-1">
-                                Sob Consulta
-                              </span>
-                            ) : (
-                              <>
-                                <span className="text-[9px] font-sans text-brand-silver uppercase tracking-widest block leading-none mb-0.5">
-                                  Valor
-                                </span>
-                                <span className="text-xl font-title font-black text-white tracking-tight block">
-                                  {formatPrice(product.price)}
-                                </span>
-                              </>
-                            )}
+                            <span className="text-[9px] font-sans text-brand-silver uppercase tracking-widest block leading-none mb-0.5">
+                              Valor
+                            </span>
+                            <span className="text-xl font-title font-black text-white tracking-tight block">
+                              {formatPrice(product.price)}
+                            </span>
                           </div>
                         )}
                       </div>
@@ -715,7 +809,7 @@ export default function Home() {
                             id: product.id,
                             name: product.name,
                             slug: product.slug,
-                            price: product.price,
+                            price: product.price ?? 0,
                             sale_price: product.sale_price,
                             image_url: product.image_url,
                             status: product.status
@@ -747,10 +841,36 @@ export default function Home() {
             <div className="w-12 h-0.5 bg-brand-gold mx-auto mt-4" />
           </div>
 
-          <form onSubmit={handleCotacaoSubmit} className="space-y-6 p-8 bg-black border border-white/5 rounded-lg gold-glow">
+          <form onSubmit={handleCotacaoSubmit} className="space-y-6 p-8 bg-black border border-white/10 rounded-lg gold-glow">
+            {/* WHATSAPP PHOTO NOTIFICATION BANNER */}
+            <div className="p-4 sm:p-5 bg-gradient-to-r from-emerald-950/40 via-brand-black to-black border border-emerald-500/30 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-start sm:items-center gap-3.5">
+                <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shrink-0 text-emerald-400">
+                  <Camera className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-sans font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                    Prefere enviar a foto pelo WhatsApp?
+                  </h4>
+                  <p className="text-xs font-sans text-slate-300 mt-0.5 leading-relaxed">
+                    Você pode conversar diretamente com nosso Concierge no WhatsApp e enviar o print ou a foto do produto para identificação rápida.
+                  </p>
+                </div>
+              </div>
+              <a
+                href="https://wa.me/5518997190799?text=Ol%C3%A1!%20Gostaria%20de%20enviar%20a%20foto%20de%20um%20produto%20que%20procuro%20para%20cota%C3%A7%C3%A3o."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 w-full sm:w-auto px-5 py-3 bg-emerald-500 hover:bg-emerald-400 text-black font-sans font-bold text-xs uppercase tracking-wider rounded-lg flex items-center justify-center gap-2 transition-all duration-300 shadow-md shadow-emerald-500/20"
+              >
+                <MessageSquare className="w-4 h-4" />
+                Enviar Foto via WhatsApp
+              </a>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
-                <label className="block text-[10px] font-sans text-brand-gold uppercase tracking-widest mb-2">Produto Desejado *</label>
+                <label className="block text-xs font-sans font-bold text-brand-gold uppercase tracking-wider mb-2">Produto Desejado *</label>
                 <input
                   type="text"
                   required
@@ -761,7 +881,7 @@ export default function Home() {
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-sans text-brand-gold uppercase tracking-widest mb-2">Link de Referência (Opcional)</label>
+                <label className="block text-xs font-sans font-bold text-brand-gold uppercase tracking-wider mb-2">Link de Referência (Opcional)</label>
                 <input
                   type="url"
                   placeholder="Ex: https://rolex.com/..."
@@ -773,7 +893,7 @@ export default function Home() {
             </div>
 
             <div>
-              <label className="block text-[10px] font-sans text-brand-gold uppercase tracking-widest mb-2">Observações Adicionais</label>
+              <label className="block text-xs font-sans font-bold text-brand-gold uppercase tracking-wider mb-2">Observações Adicionais</label>
               <textarea
                 rows={4}
                 placeholder="Especifique cor, tamanho, voltagem ou quaisquer especificações adicionais que facilitem a cotação..."

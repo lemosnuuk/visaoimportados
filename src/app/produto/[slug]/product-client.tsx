@@ -7,7 +7,7 @@ import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { useCart } from '@/components/cart-context'
 import { createClient } from '@/lib/supabase/client'
-import { ShoppingBag, ArrowLeft, Send, Check } from 'lucide-react'
+import { ShoppingBag, ArrowLeft, Send, Check, Camera, Sparkles } from 'lucide-react'
 
 interface Product {
   id: string
@@ -15,7 +15,7 @@ interface Product {
   brand?: string | null
   slug: string
   description: string
-  price: number
+  price: number | null
   sale_price: number | null
   status: 'in_stock' | 'pre_order' | 'on_request'
   featured: boolean
@@ -25,6 +25,8 @@ interface Product {
   category_slug?: string
   image_url: string
   images: string[]
+  is_campaign?: boolean
+  campaign_badge?: string | null
 }
 
 export default function ProductClientPage({ product }: { product: Product }) {
@@ -43,7 +45,7 @@ export default function ProductClientPage({ product }: { product: Product }) {
           .select(`
             id, name, brand, slug, description, price, sale_price, status,
             categories(name, slug),
-            product_images(image_url)
+            product_images(image_url, display_order)
           `)
           .neq('id', product.id)
           .limit(4)
@@ -56,17 +58,19 @@ export default function ProductClientPage({ product }: { product: Product }) {
 
         if (dbProducts && dbProducts.length > 0) {
           const formatted = dbProducts.map((p: any) => {
-            const imgUrl = p.product_images && p.product_images.length > 0
-              ? p.product_images[0].image_url
-              : 'https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=600&auto=format&fit=crop&q=80'
+            let imgUrl = 'https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=600&auto=format&fit=crop&q=80'
+            if (p.product_images && p.product_images.length > 0) {
+              const sorted = [...p.product_images].sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0))
+              imgUrl = sorted[0].image_url
+            }
             return {
               id: p.id,
               name: p.name,
               brand: p.brand || null,
               slug: p.slug,
               description: p.description || '',
-              price: Number(p.price),
-              sale_price: p.sale_price ? Number(p.sale_price) : null,
+              price: p.price !== null && p.price !== undefined ? Number(p.price) : null,
+              sale_price: p.sale_price !== null && p.sale_price !== undefined ? Number(p.sale_price) : null,
               status: p.status,
               category_name: p.categories?.name || 'Importados',
               image_url: imgUrl
@@ -88,7 +92,7 @@ export default function ProductClientPage({ product }: { product: Product }) {
   const handleDirectBuyWhatsApp = () => {
     const whatsappNumber = '5511999999999'
     const finalPrice = product.sale_price ?? product.price
-    const priceText = product.status === 'on_request'
+    const priceText = (finalPrice === null || product.status === 'on_request')
       ? 'sob consulta de cotação'
       : `no valor de ${formatPrice(finalPrice)}`
 
@@ -107,7 +111,7 @@ export default function ProductClientPage({ product }: { product: Product }) {
       id: product.id,
       name: product.name,
       slug: product.slug,
-      price: product.price,
+      price: product.price ?? 0,
       sale_price: product.sale_price,
       image_url: product.image_url,
       status: product.status
@@ -116,7 +120,8 @@ export default function ProductClientPage({ product }: { product: Product }) {
     setTimeout(() => setIsAdded(false), 2000)
   }
 
-  const formatPrice = (price: number) => {
+  const formatPrice = (price: number | null) => {
+    if (price === null || price === undefined) return 'Sob Consulta'
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
@@ -140,26 +145,28 @@ export default function ProductClientPage({ product }: { product: Product }) {
     switch (status) {
       case 'in_stock':
         return (
-          <span className="text-[10px] font-sans font-bold uppercase tracking-widest px-3 py-1 bg-green-950/50 text-green-400 border border-green-500/20 rounded">
+          <span className="text-xs font-sans font-bold uppercase tracking-widest px-3.5 py-1 bg-green-950/70 text-green-400 border border-green-500/30 rounded">
             Em Estoque
           </span>
         )
       case 'pre_order':
         return (
-          <span className="text-[10px] font-sans font-bold uppercase tracking-widest px-3 py-1 bg-amber-950/50 text-amber-400 border border-amber-500/20 rounded">
+          <span className="text-xs font-sans font-bold uppercase tracking-widest px-3.5 py-1 bg-amber-950/70 text-amber-400 border border-amber-500/30 rounded">
             Sob Encomenda
           </span>
         )
       case 'on_request':
         return (
-          <span className="text-[10px] font-sans font-bold uppercase tracking-widest px-3 py-1 bg-blue-950/50 text-blue-400 border border-blue-500/20 rounded">
-            Importação sob Consulta
+          <span className="text-xs font-sans font-bold uppercase tracking-widest px-3.5 py-1 bg-blue-950/70 text-blue-400 border border-blue-500/30 rounded">
+            Sob Consulta
           </span>
         )
       default:
         return null
     }
   }
+
+  const isPriceConsultable = product.price === null || product.status === 'on_request' || (product.status === 'pre_order' && product.price === null)
 
   return (
     <>
@@ -170,7 +177,7 @@ export default function ProductClientPage({ product }: { product: Product }) {
           {/* BACK NAVIGATION */}
           <Link
             href="/catalogo"
-            className="inline-flex items-center gap-2 text-xs font-sans text-brand-silver hover:text-brand-gold transition-colors duration-300 mb-12 uppercase tracking-wider"
+            className="inline-flex items-center gap-2 text-xs font-sans text-brand-silver hover:text-brand-gold transition-colors duration-300 mb-12 uppercase tracking-wider font-bold"
           >
             <ArrowLeft className="w-4 h-4" />
             Voltar para o catálogo
@@ -180,14 +187,27 @@ export default function ProductClientPage({ product }: { product: Product }) {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 mb-24">
             {/* LEFT COLUMN: GALLERY */}
             <div className="flex flex-col gap-6">
-              <div className="relative h-[550px] w-full overflow-hidden rounded-lg border border-white/5 bg-brand-black flex items-center justify-center">
+              <div className="relative h-[550px] w-full overflow-hidden rounded-lg border border-white/10 bg-gradient-to-b from-brand-black via-zinc-950 to-black flex items-center justify-center p-6 group">
                 <Image
                   src={activeImage}
                   alt={product.name}
                   fill
-                  className="object-cover transition-all duration-500 hover:scale-105"
+                  className="object-contain p-6 transition-all duration-500 group-hover:scale-105 drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]"
                   priority
                 />
+                {product.is_campaign && (
+                  <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-2">
+                    <div className="bg-gradient-to-r from-amber-400 to-amber-500 text-black font-sans font-black text-xs uppercase px-3 py-1.5 rounded-lg shadow-lg shadow-amber-500/20 tracking-wider flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-black animate-pulse" />
+                      {product.campaign_badge || 'Campanha Ativa'}
+                    </div>
+                    {product.price && product.sale_price && product.sale_price < product.price && (
+                      <div className="bg-brand-gold text-black font-sans font-black text-xs uppercase px-3 py-1.5 rounded-lg shadow-lg shadow-brand-gold/20 tracking-wider">
+                        -{Math.round(((product.price - product.sale_price) / product.price) * 100)}% OFF
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Thumbnails row */}
@@ -197,18 +217,23 @@ export default function ProductClientPage({ product }: { product: Product }) {
                     <button
                       key={index}
                       onClick={() => setActiveImage(img)}
-                      className={`relative w-24 h-24 rounded border overflow-hidden shrink-0 transition-all duration-300 ${
+                      className={`relative w-24 h-24 rounded-lg border overflow-hidden shrink-0 transition-all duration-300 bg-brand-black p-1.5 ${
                         activeImage === img
-                          ? 'border-brand-gold ring-1 ring-brand-gold'
-                          : 'border-white/5 hover:border-white/20'
+                          ? 'border-brand-gold ring-2 ring-brand-gold/50 shadow-md shadow-brand-gold/10'
+                          : 'border-white/10 hover:border-white/30'
                       }`}
                     >
                       <Image
                         src={img}
                         alt={`${product.name} Thumbnail ${index + 1}`}
                         fill
-                        className="object-cover"
+                        className="object-contain p-1"
                       />
+                      {index === 0 && (
+                        <span className="absolute bottom-0 inset-x-0 bg-brand-gold text-black text-[9px] font-sans font-bold uppercase text-center py-0.5 z-10">
+                          Capa
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -217,6 +242,13 @@ export default function ProductClientPage({ product }: { product: Product }) {
 
             {/* RIGHT COLUMN: INFO */}
             <div className="flex flex-col justify-start">
+              {product.is_campaign && (
+                <div className="inline-flex items-center gap-1.5 text-xs font-sans font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-3 py-1 rounded-md mb-3 w-fit">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  {product.campaign_badge || 'Produto Selecionado em Campanha Ativa'}
+                </div>
+              )}
+
               {/* Category & Status */}
               <div className="flex items-center justify-between gap-4 mb-4">
                 <span className="text-xs font-sans text-brand-gold uppercase tracking-widest font-bold">
@@ -231,20 +263,34 @@ export default function ProductClientPage({ product }: { product: Product }) {
               </h1>
 
               {/* Price display */}
-              <div className="mb-8 p-6 bg-brand-black border border-white/5 rounded-lg">
-                <span className="text-[10px] font-sans text-brand-silver uppercase tracking-widest block mb-2">Valor Estimado</span>
-                {product.status === 'on_request' ? (
-                  <span className="text-2xl font-sans font-bold text-brand-gold-light uppercase tracking-wider">Cotação sob Consulta</span>
+              <div className="mb-8 p-6 bg-brand-black border border-white/10 rounded-lg">
+                <span className="text-xs font-sans text-slate-300 uppercase tracking-widest block mb-2 font-bold">
+                  Valor do Produto
+                </span>
+                {isPriceConsultable ? (
+                  <div className="space-y-1">
+                    <span className="text-2xl sm:text-3xl font-sans font-bold text-brand-gold-light uppercase tracking-wider block">
+                      {product.status === 'pre_order' ? 'Sob Encomenda (Sob Consulta)' : 'Sob Consulta'}
+                    </span>
+                    <p className="text-xs font-sans text-slate-300">
+                      Entre em contato via WhatsApp para consultar o valor atualizado e prazos.
+                    </p>
+                  </div>
                 ) : (
-                  <div className="flex items-baseline gap-4">
+                  <div className="flex items-center gap-4 flex-wrap">
                     {product.sale_price ? (
                       <>
                         <span className="text-2xl sm:text-3xl font-sans font-bold text-brand-gold-light">
                           {formatPrice(product.sale_price)}
                         </span>
-                        <span className="text-sm font-sans text-brand-silver line-through">
+                        <span className="text-sm font-sans text-slate-400 line-through">
                           {formatPrice(product.price)}
                         </span>
+                        {(product as any).is_campaign && product.price && product.price > product.sale_price && (
+                          <span className="px-2.5 py-1 bg-red-600/90 text-white font-sans font-black text-xs uppercase tracking-wider rounded shadow-md">
+                            -{Math.round(((product.price - product.sale_price) / product.price) * 100)}% OFF
+                          </span>
+                        )}
                       </>
                     ) : (
                       <span className="text-2xl sm:text-3xl font-sans font-bold text-white">
@@ -253,7 +299,7 @@ export default function ProductClientPage({ product }: { product: Product }) {
                     )}
                   </div>
                 )}
-                <span className="text-[10px] font-sans text-brand-silver/50 block mt-3">
+                <span className="text-[11px] font-sans text-slate-400 block mt-3">
                   * Valores sujeitos a alteração cambial ou de taxas aduaneiras.
                 </span>
               </div>
@@ -261,106 +307,112 @@ export default function ProductClientPage({ product }: { product: Product }) {
               {/* Description */}
               <div className="mb-10">
                 <h3 className="font-title text-xs text-white uppercase tracking-wider mb-3">Sobre o Produto</h3>
-                <p className="font-sans text-xs text-brand-silver/90 leading-relaxed whitespace-pre-line">
+                <p className="font-sans text-sm text-slate-200 leading-relaxed whitespace-pre-line">
                   {product.description || 'Nenhuma descrição adicional informada para este item exclusivo.'}
                 </p>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4">
-                <button
-                  onClick={handleDirectBuyWhatsApp}
-                  className="flex-1 flex items-center justify-center gap-2 py-4 bg-gold-gradient text-black font-sans font-bold text-xs uppercase tracking-widest rounded hover:opacity-95 transition-all duration-300"
-                >
-                  <Send className="w-4.5 h-4.5" />
-                  Comprar pelo WhatsApp
-                </button>
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <button
+                    onClick={handleDirectBuyWhatsApp}
+                    className="flex-1 flex items-center justify-center gap-2 py-4 bg-gold-gradient text-black font-sans font-bold text-xs uppercase tracking-widest rounded hover:opacity-95 transition-all duration-300 shadow-lg shadow-brand-gold/10"
+                  >
+                    <Send className="w-4.5 h-4.5" />
+                    {isPriceConsultable ? 'Consultar Valor no WhatsApp' : 'Comprar pelo WhatsApp'}
+                  </button>
 
-                <button
-                  onClick={handleAddToCart}
-                  className={`flex-1 flex items-center justify-center gap-2 py-4 border font-sans font-bold text-xs uppercase tracking-widest rounded transition-all duration-300 ${
-                    isAdded
-                      ? 'bg-green-950 border-green-500 text-green-400'
-                      : 'bg-transparent border-white/20 text-white hover:border-brand-gold hover:text-brand-gold'
-                  }`}
-                >
-                  {isAdded ? (
-                    <>
-                      <Check className="w-4 h-4" />
-                      Adicionado
-                    </>
-                  ) : (
-                    <>
-                      <ShoppingBag className="w-4 h-4" />
-                      Adicionar ao Carrinho
-                    </>
-                  )}
-                </button>
+                  <button
+                    onClick={handleAddToCart}
+                    className={`flex-1 flex items-center justify-center gap-2 py-4 border font-sans font-bold text-xs uppercase tracking-widest rounded transition-all duration-300 ${
+                      isAdded
+                        ? 'bg-green-950 border-green-500 text-green-400'
+                        : 'bg-transparent border-white/20 text-white hover:border-brand-gold hover:text-brand-gold'
+                    }`}
+                  >
+                    {isAdded ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        Adicionado
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingBag className="w-4 h-4" />
+                        Adicionar ao Carrinho
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Helper notice for photo via WhatsApp */}
+                <p className="text-xs font-sans text-slate-300 mt-2 flex items-center gap-2 bg-emerald-950/40 border border-emerald-500/30 p-3 rounded-lg">
+                  <Camera className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Dica: Ao iniciar a conversa, fique à vontade para nos enviar a foto ou print do produto desejado para identificação imediata!</span>
+                </p>
               </div>
             </div>
           </div>
 
           {/* RELATED PRODUCTS */}
           {relatedProducts.length > 0 && (
-            <div className="border-t border-white/5 pt-16">
+            <div className="border-t border-white/10 pt-16">
               <h2 className="font-title text-xl sm:text-2xl text-white uppercase tracking-wider mb-10">PRODUTOS RELACIONADOS</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
-                {relatedProducts.map((p) => (
-                  <div
-                    key={p.id}
-                    className="bg-brand-black border border-white/5 hover:border-brand-gold/30 rounded-lg overflow-hidden flex flex-col group transition-all duration-500 hover:shadow-[0_8px_30px_rgba(212,175,55,0.06)] hover:-translate-y-0.5"
-                  >
-                    <Link href={`/produto/${p.slug}`} className="relative h-64 overflow-hidden block">
-                      <Image
-                        src={p.image_url}
-                        alt={p.name}
-                        fill
-                        className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    </Link>
-
-                    <div className="p-5 flex flex-col flex-grow bg-gradient-to-b from-brand-black to-black/90">
-                      <span className="text-[9px] font-sans text-brand-gold uppercase tracking-widest mb-1.5 font-bold">
-                        {p.category_name} {p.brand && `• ${p.brand}`}
-                      </span>
-                      <Link href={`/produto/${p.slug}`}>
-                        <h3 className="font-title text-[11px] text-white mb-3 uppercase tracking-wide group-hover:text-brand-gold transition-colors duration-300 line-clamp-2 min-h-6 font-bold leading-tight">
-                          {p.name}
-                        </h3>
+                {relatedProducts.map((p) => {
+                  const pConsultable = p.price === null || p.status === 'on_request'
+                  return (
+                    <div
+                      key={p.id}
+                      className="bg-brand-black border border-white/10 hover:border-brand-gold/40 rounded-lg overflow-hidden flex flex-col group transition-all duration-500 hover:shadow-[0_8px_30px_rgba(212,175,55,0.06)] hover:-translate-y-0.5"
+                    >
+                      <Link href={`/produto/${p.slug}`} className="relative h-64 overflow-hidden block">
+                        <Image
+                          src={p.image_url}
+                          alt={p.name}
+                          fill
+                          className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+                        />
                       </Link>
-                      <div className="mt-auto pt-3 border-t border-white/5">
-                        {p.sale_price ? (
-                          <div className="flex flex-col">
-                            <span className="text-[9px] font-sans text-brand-silver line-through leading-none">
-                              {formatPrice(p.price)}
+
+                      <div className="p-5 flex flex-col flex-grow bg-gradient-to-b from-brand-black to-black/90">
+                        <span className="text-[10px] font-sans text-brand-gold uppercase tracking-widest mb-1.5 font-bold">
+                          {p.category_name} {p.brand && `• ${p.brand}`}
+                        </span>
+                        <Link href={`/produto/${p.slug}`}>
+                          <h3 className="font-title text-xs text-white mb-3 uppercase tracking-wide group-hover:text-brand-gold transition-colors duration-300 line-clamp-2 min-h-8 font-bold leading-tight">
+                            {p.name}
+                          </h3>
+                        </Link>
+                        <div className="mt-auto pt-3 border-t border-white/10">
+                          {pConsultable ? (
+                            <span className="text-xs font-title font-bold text-brand-gold-light uppercase tracking-widest block py-0.5">
+                              Sob Consulta
                             </span>
-                            <span className="text-base font-title font-black text-brand-gold-light tracking-tight mt-0.5">
-                              {formatPrice(p.sale_price)}
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col">
-                            {p.status === 'on_request' ? (
-                              <span className="text-[10px] font-title font-bold text-brand-silver uppercase tracking-widest block py-0.5">
-                                Sob Consulta
+                          ) : p.sale_price ? (
+                            <div className="flex flex-col">
+                              <span className="text-xs font-sans text-slate-400 line-through leading-none">
+                                {formatPrice(p.price)}
                               </span>
-                            ) : (
-                              <>
-                                <span className="text-[8px] font-sans text-brand-silver uppercase tracking-widest leading-none mb-0.5">
-                                  Valor
-                                </span>
-                                <span className="text-base font-title font-black text-white tracking-tight">
-                                  {formatPrice(p.price)}
-                                </span>
-                              </>
-                            )}
-                          </div>
-                        )}
+                              <span className="text-base font-title font-black text-brand-gold-light tracking-tight mt-0.5">
+                                {formatPrice(p.sale_price)}
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col">
+                              <span className="text-[9px] font-sans text-slate-400 uppercase tracking-widest leading-none mb-0.5">
+                                Valor
+                              </span>
+                              <span className="text-base font-title font-black text-white tracking-tight">
+                                {formatPrice(p.price)}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}

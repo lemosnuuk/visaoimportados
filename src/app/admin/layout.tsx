@@ -14,7 +14,8 @@ import {
   Menu, 
   X, 
   ShieldCheck,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Sparkles
 } from 'lucide-react'
 
 export default function AdminLayout({
@@ -46,6 +47,7 @@ export default function AdminLayout({
     { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/admin/produtos', label: 'Produtos', icon: Package },
     { href: '/admin/categorias', label: 'Categorias', icon: Tag },
+    { href: '/admin/campanhas', label: 'Campanhas', icon: Sparkles },
     { href: '/admin/movimentacoes', label: 'Movimentações', icon: ArrowRightLeft },
   ]
 
@@ -139,9 +141,9 @@ export default function AdminLayout({
             />
           </div>
           <div className="flex flex-col">
-            <span className="font-title text-sm tracking-wider text-white">VISÃO IMPORTADOS</span>
-            <span className="text-[8px] font-sans tracking-widest text-brand-gold uppercase flex items-center gap-1">
-              <ShieldCheck className="w-3 h-3" />
+            <span className="font-title text-base font-bold tracking-wider text-white">VISÃO IMPORTADOS</span>
+            <span className="text-[10px] font-sans font-bold tracking-widest text-brand-gold uppercase flex items-center gap-1">
+              <ShieldCheck className="w-3.5 h-3.5" />
               PAINEL ADMIN
             </span>
           </div>
@@ -156,10 +158,10 @@ export default function AdminLayout({
               <Link
                 key={link.href}
                 href={link.href}
-                className={`flex items-center gap-3 py-3 px-4 rounded text-xs font-sans uppercase tracking-widest transition-all ${
+                className={`flex items-center gap-3 py-3.5 px-4 rounded text-xs font-sans uppercase tracking-wider font-bold transition-all ${
                   active
-                    ? 'bg-brand-gold text-black font-bold shadow-lg shadow-brand-gold/10'
-                    : 'text-brand-white hover:bg-white/5 hover:text-brand-gold'
+                    ? 'bg-brand-gold text-black shadow-lg shadow-brand-gold/10'
+                    : 'text-slate-200 hover:bg-white/10 hover:text-brand-gold'
                 }`}
               >
                 <Icon className="w-4 h-4 shrink-0" />
@@ -170,17 +172,17 @@ export default function AdminLayout({
         </nav>
 
         {/* SIDEBAR FOOTER */}
-        <div className="border-t border-white/5 pt-6 flex flex-col gap-2 mt-auto">
+        <div className="border-t border-white/10 pt-6 flex flex-col gap-2 mt-auto">
           <Link
             href="/"
-            className="flex items-center gap-3 py-3 px-4 text-xs font-sans text-brand-silver hover:text-white"
+            className="flex items-center gap-3 py-3 px-4 text-xs font-sans font-medium text-slate-300 hover:text-white"
           >
-            <Globe className="w-4 h-4 shrink-0" />
+            <Globe className="w-4 h-4 shrink-0 text-brand-gold" />
             Visualizar Site
           </Link>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 py-3 px-4 text-xs font-sans text-red-400 hover:text-red-300 hover:bg-red-950/20 rounded"
+            className="flex items-center gap-3 py-3 px-4 text-xs font-sans font-bold text-red-400 hover:text-red-300 hover:bg-red-950/30 rounded"
           >
             <LogOut className="w-4 h-4 shrink-0" />
             Sair do Painel
