@@ -509,6 +509,7 @@ export default function Home() {
                     <Link
                       href={col.link}
                       onClick={(e) => {
+                        e.stopPropagation();
                         if (col.link.startsWith('#')) {
                           e.preventDefault();
                           const target = document.getElementById(col.link.substring(1));
