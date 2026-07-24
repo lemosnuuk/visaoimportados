@@ -22,7 +22,11 @@ import {
   Download,
   Users,
   FileText,
-  Edit2
+  Edit2,
+  CreditCard,
+  Receipt,
+  Wallet,
+  CheckCircle2
 } from 'lucide-react'
 
 interface Product {
@@ -56,6 +60,15 @@ interface Movement {
   } | null
 }
 
+interface MovementPayment {
+  id: string
+  movement_id: string
+  amount: number
+  payment_date: string
+  notes: string | null
+  created_at?: string
+}
+
 export default function AdminMovimentacoesPage() {
   const [movements, setMovements] = useState<Movement[]>([])
   const [products, setProducts] = useState<Product[]>([])
@@ -71,6 +84,15 @@ export default function AdminMovimentacoesPage() {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingMovementId, setEditingMovementId] = useState<string | null>(null)
+
+  // Payment Abatements State
+  const [paymentsMap, setPaymentsMap] = useState<Record<string, MovementPayment[]>>({})
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
+  const [paymentMovement, setPaymentMovement] = useState<Movement | null>(null)
+  const [paymentAmountInput, setPaymentAmountInput] = useState('')
+  const [paymentDateInput, setPaymentDateInput] = useState(new Date().toISOString().substring(0, 10))
+  const [paymentNotesInput, setPaymentNotesInput] = useState('')
+  const [paymentSubmitLoading, setPaymentSubmitLoading] = useState(false)
 
   // Reports Panel States
   const [isReportsModalOpen, setIsReportsModalOpen] = useState(false)
@@ -161,6 +183,32 @@ export default function AdminMovimentacoesPage() {
           setReportProductId(dbProducts[0].id)
         }
       }
+
+      // 3. Fetch movement payments
+      try {
+        const { data: dbPayments, error: payErr } = await supabase
+          .from('movement_payments')
+          .select('*')
+          .order('payment_date', { ascending: false })
+
+        if (!payErr && dbPayments) {
+          const pMap: Record<string, MovementPayment[]> = {}
+          dbPayments.forEach((p: any) => {
+            if (!pMap[p.movement_id]) pMap[p.movement_id] = []
+            pMap[p.movement_id].push({
+              id: p.id,
+              movement_id: p.movement_id,
+              amount: Number(p.amount),
+              payment_date: p.payment_date,
+              notes: p.notes,
+              created_at: p.created_at
+            })
+          })
+          setPaymentsMap(pMap)
+        }
+      } catch (pErr) {
+        console.warn('movement_payments table not loaded:', pErr)
+      }
     } catch (err) {
       console.error('Error loading movements initial data:', err)
     } finally {
@@ -208,6 +256,153 @@ export default function AdminMovimentacoesPage() {
       }
     } catch (err) {
       console.error('Error fetching recent purchases:', err)
+    }
+  }
+
+  const getMovementPaidStats = (m: Movement) => {
+    const totalSale = (m.quantity || 1) * (m.sale_price || 0)
+    const movPayments = paymentsMap[m.id] || []
+
+    let totalPaid = 0
+    if (movPayments.length > 0) {
+      totalPaid = movPayments.reduce((acc, p) => acc + p.amount, 0)
+    } else {
+      if (m.type === 'entrada' || m.payment_type === 'vista' || m.payment_status === 'pago') {
+        totalPaid = totalSale
+      } else if (m.installments_total > 0 && m.installments_paid > 0) {
+        totalPaid = (m.installments_paid / m.installments_total) * totalSale
+      }
+    }
+
+    const remaining = Math.max(0, totalSale - totalPaid)
+    const percentPaid = totalSale > 0 ? Math.min(100, (totalPaid / totalSale) * 100) : (m.type === 'entrada' ? 100 : 0)
+
+    let status: 'pago' | 'pendente' | 'parcialmente_pago' = 'pendente'
+    if (m.type === 'entrada') {
+      status = 'pago'
+    } else if (totalPaid >= totalSale && totalSale > 0) {
+      status = 'pago'
+    } else if (totalPaid > 0) {
+      status = 'parcialmente_pago'
+    } else {
+      status = m.payment_status || 'pendente'
+    }
+
+    return { totalSale, totalPaid, remaining, percentPaid, status, movPayments }
+  }
+
+  const handleOpenPaymentModal = (m: Movement) => {
+    setPaymentMovement(m)
+    const stats = getMovementPaidStats(m)
+    setPaymentAmountInput(stats.remaining > 0 ? String(stats.remaining.toFixed(2)) : '')
+    setPaymentDateInput(new Date().toISOString().substring(0, 10))
+    setPaymentNotesInput('')
+    setIsPaymentModalOpen(true)
+  }
+
+  const handleAddPayment = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!paymentMovement || !paymentAmountInput) return
+
+    const amount = parseFloat(paymentAmountInput)
+    if (isNaN(amount) || amount <= 0) {
+      alert('Por favor, informe um valor de abatimento válido.')
+      return
+    }
+
+    setPaymentSubmitLoading(true)
+    try {
+      const payload = {
+        movement_id: paymentMovement.id,
+        amount,
+        payment_date: new Date(paymentDateInput).toISOString(),
+        notes: paymentNotesInput || null
+      }
+
+      const { data, error } = await supabase
+        .from('movement_payments')
+        .insert([payload])
+        .select()
+
+      if (error) {
+        alert('Erro ao registrar abatimento: ' + error.message)
+        return
+      }
+
+      const createdObj = data && data.length > 0 ? data[0] : null
+      const newPayment: MovementPayment = {
+        id: createdObj?.id || String(Date.now()),
+        movement_id: paymentMovement.id,
+        amount,
+        payment_date: createdObj?.payment_date || new Date(paymentDateInput).toISOString(),
+        notes: paymentNotesInput || null
+      }
+
+      const existing = paymentsMap[paymentMovement.id] || []
+      const updatedPayments = [newPayment, ...existing]
+      const newPaymentsMap = { ...paymentsMap, [paymentMovement.id]: updatedPayments }
+      setPaymentsMap(newPaymentsMap)
+
+      // Recalculate status
+      const totalSale = paymentMovement.quantity * (paymentMovement.sale_price || 0)
+      const newTotalPaid = updatedPayments.reduce((acc, p) => acc + p.amount, 0)
+      let newStatus: 'pago' | 'pendente' | 'parcialmente_pago' = 'pendente'
+      if (newTotalPaid >= totalSale) newStatus = 'pago'
+      else if (newTotalPaid > 0) newStatus = 'parcialmente_pago'
+
+      await supabase
+        .from('product_movements')
+        .update({ payment_status: newStatus })
+        .eq('id', paymentMovement.id)
+
+      setMovements(prev => prev.map(m => m.id === paymentMovement.id ? { ...m, payment_status: newStatus } : m))
+
+      const remainingAfter = Math.max(0, totalSale - newTotalPaid)
+      setPaymentAmountInput(remainingAfter > 0 ? String(remainingAfter.toFixed(2)) : '')
+      setPaymentNotesInput('')
+    } catch (err) {
+      console.error('Error adding payment:', err)
+      alert('Erro ao registrar abatimento.')
+    } finally {
+      setPaymentSubmitLoading(false)
+    }
+  }
+
+  const handleDeletePaymentItem = async (paymentId: string) => {
+    if (!confirm('Deseja realmente cancelar este lançamento de pagamento?')) return
+    if (!paymentMovement) return
+
+    try {
+      const { error } = await supabase
+        .from('movement_payments')
+        .delete()
+        .eq('id', paymentId)
+
+      if (error) {
+        alert('Erro ao excluir lançamento: ' + error.message)
+        return
+      }
+
+      const existing = paymentsMap[paymentMovement.id] || []
+      const updatedPayments = existing.filter(p => p.id !== paymentId)
+      const newPaymentsMap = { ...paymentsMap, [paymentMovement.id]: updatedPayments }
+      setPaymentsMap(newPaymentsMap)
+
+      // Recalculate status
+      const totalSale = paymentMovement.quantity * (paymentMovement.sale_price || 0)
+      const newTotalPaid = updatedPayments.reduce((acc, p) => acc + p.amount, 0)
+      let newStatus: 'pago' | 'pendente' | 'parcialmente_pago' = 'pendente'
+      if (newTotalPaid >= totalSale) newStatus = 'pago'
+      else if (newTotalPaid > 0) newStatus = 'parcialmente_pago'
+
+      await supabase
+        .from('product_movements')
+        .update({ payment_status: newStatus })
+        .eq('id', paymentMovement.id)
+
+      setMovements(prev => prev.map(m => m.id === paymentMovement.id ? { ...m, payment_status: newStatus } : m))
+    } catch (err) {
+      console.error('Error deleting payment:', err)
     }
   }
 
@@ -1027,53 +1222,53 @@ export default function AdminMovimentacoesPage() {
                     <td className="py-4">
                       {m.type === 'entrada' ? (
                         <span className="text-[10px] text-green-400 font-bold uppercase">Pago</span>
-                      ) : (
-                        <div className="flex flex-col gap-1">
-                          {m.payment_type === 'vista' ? (
-                            <span className="text-[10px] text-green-400 font-bold uppercase">À Vista</span>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] text-amber-400 font-bold uppercase">
-                                Parcelado ({m.installments_paid}/{m.installments_total})
-                              </span>
-                              <div className="flex gap-1">
-                                <button
-                                  onClick={() => handleStepInstallment(m, -1)}
-                                  className="w-4 h-4 flex items-center justify-center bg-white/5 border border-white/10 rounded hover:bg-white/10 font-bold text-white text-[10px]"
-                                  title="Diminuir parcela paga"
-                                  disabled={m.installments_paid <= 0}
-                                >
-                                  -
-                                </button>
-                                <button
-                                  onClick={() => handleStepInstallment(m, 1)}
-                                  className="w-4 h-4 flex items-center justify-center bg-white/5 border border-white/10 rounded hover:bg-white/10 font-bold text-white text-[10px]"
-                                  title="Aumentar parcela paga"
-                                  disabled={m.installments_paid >= m.installments_total}
-                                >
-                                  +
-                                </button>
+                      ) : (() => {
+                        const stats = getMovementPaidStats(m)
+                        return (
+                          <div className="flex flex-col gap-1 min-w-[140px]">
+                            {stats.status === 'pago' ? (
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[9px] font-sans font-bold uppercase text-green-400 bg-green-950/45 border border-green-500/25 px-2 py-0.5 rounded flex items-center gap-1">
+                                  <CheckCircle2 className="w-3 h-3 text-green-400" />
+                                  Quitado
+                                </span>
                               </div>
-                            </div>
-                          )}
+                            ) : stats.status === 'parcialmente_pago' ? (
+                              <div className="space-y-1">
+                                <span className="text-[9px] font-sans font-bold uppercase text-amber-400 bg-amber-950/45 border border-amber-500/25 px-2 py-0.5 rounded inline-block">
+                                  Parcial
+                                </span>
+                                <div className="text-[10px] font-mono text-brand-silver">
+                                  Falta: <strong className="text-amber-400">{formatPrice(stats.remaining)}</strong>
+                                </div>
+                                <div className="w-full bg-white/10 h-1 rounded-full overflow-hidden">
+                                  <div 
+                                    className="bg-amber-400 h-full rounded-full transition-all duration-300" 
+                                    style={{ width: `${stats.percentPaid}%` }} 
+                                  />
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="space-y-1">
+                                <span className="text-[9px] font-sans font-bold uppercase text-red-400 bg-red-950/45 border border-red-500/25 px-2 py-0.5 rounded inline-block">
+                                  Pendente
+                                </span>
+                                <div className="text-[10px] font-mono text-brand-silver">
+                                  Falta: <strong className="text-red-400">{formatPrice(stats.remaining)}</strong>
+                                </div>
+                              </div>
+                            )}
 
-                          {m.payment_status === 'pago' && (
-                            <span className="text-[9px] font-sans font-bold uppercase text-green-400 bg-green-950/45 border border-green-500/25 px-1.5 py-0.5 rounded w-max">
-                              Quitado
-                            </span>
-                          )}
-                          {m.payment_status === 'parcialmente_pago' && (
-                            <span className="text-[9px] font-sans font-bold uppercase text-amber-400 bg-amber-950/45 border border-amber-500/25 px-1.5 py-0.5 rounded w-max">
-                              Parcial
-                            </span>
-                          )}
-                          {m.payment_status === 'pendente' && (
-                            <span className="text-[9px] font-sans font-bold uppercase text-red-400 bg-red-950/45 border border-red-500/25 px-1.5 py-0.5 rounded w-max">
-                              Pendente
-                            </span>
-                          )}
-                        </div>
-                      )}
+                            <button
+                              onClick={() => handleOpenPaymentModal(m)}
+                              className="text-[9px] text-brand-gold hover:underline font-bold text-left mt-0.5 flex items-center gap-1"
+                            >
+                              <Receipt className="w-3 h-3" />
+                              {stats.movPayments.length > 0 ? `${stats.movPayments.length} abatimento(s)` : 'Abater valor'}
+                            </button>
+                          </div>
+                        )
+                      })()}
                     </td>
 
                     {/* Ações */}
@@ -1086,6 +1281,15 @@ export default function AdminMovimentacoesPage() {
                             title="Ver Observação"
                           >
                             <Info className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {m.type === 'saida' && (
+                          <button
+                            onClick={() => handleOpenPaymentModal(m)}
+                            className="p-2 text-brand-silver hover:text-green-400 bg-white/5 border border-white/10 hover:border-green-500/30 rounded transition-colors"
+                            title="Gerenciar Abatimentos / Pagamentos"
+                          >
+                            <Wallet className="w-3.5 h-3.5" />
                           </button>
                         )}
                         <button
@@ -1524,6 +1728,190 @@ export default function AdminMovimentacoesPage() {
           </div>
         </div>
       )}
+
+      {/* MODAL ABATIMENTOS E HISTÓRICO DE PAGAMENTOS */}
+      {isPaymentModalOpen && paymentMovement && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-brand-black border border-white/10 rounded-xl max-w-2xl w-full p-8 space-y-6 relative max-h-[90vh] overflow-y-auto">
+            {/* Close */}
+            <button
+              onClick={() => setIsPaymentModalOpen(false)}
+              className="absolute top-6 right-6 p-1.5 border border-white/10 rounded text-brand-silver hover:text-white transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Title & Customer info */}
+            <div>
+              <h3 className="font-title text-xl text-white uppercase tracking-wide flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-brand-gold" />
+                Abatimentos & Recebimentos
+              </h3>
+              <p className="font-sans text-xs text-brand-silver mt-1">
+                Cliente: <strong className="text-white">{paymentMovement.customer_name || 'Geral / Não Identificado'}</strong> | Produto: <strong className="text-white">{paymentMovement.products?.name}</strong>
+              </p>
+            </div>
+
+            {/* Summary Cards */}
+            {(() => {
+              const stats = getMovementPaidStats(paymentMovement)
+              return (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="bg-white/[0.03] border border-white/10 p-4 rounded-lg">
+                      <span className="text-[10px] font-sans font-bold text-brand-silver uppercase tracking-wider block">Total da Venda</span>
+                      <span className="text-xl font-title font-bold text-white mt-1 block">{formatPrice(stats.totalSale)}</span>
+                    </div>
+
+                    <div className="bg-white/[0.03] border border-white/10 p-4 rounded-lg">
+                      <span className="text-[10px] font-sans font-bold text-brand-gold uppercase tracking-wider block">Total Já Pago ({stats.percentPaid.toFixed(0)}%)</span>
+                      <span className="text-xl font-title font-bold text-green-400 mt-1 block">{formatPrice(stats.totalPaid)}</span>
+                    </div>
+
+                    <div className="bg-white/[0.03] border border-white/10 p-4 rounded-lg">
+                      <span className="text-[10px] font-sans font-bold text-brand-silver uppercase tracking-wider block">Saldo Restante (Falta)</span>
+                      <span className={`text-xl font-title font-bold mt-1 block ${stats.remaining > 0 ? 'text-amber-400' : 'text-green-400'}`}>
+                        {formatPrice(stats.remaining)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div className="w-full bg-white/10 h-2 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full rounded-full transition-all duration-500 ${stats.remaining === 0 ? 'bg-green-500' : 'bg-amber-400'}`} 
+                      style={{ width: `${stats.percentPaid}%` }} 
+                    />
+                  </div>
+                </div>
+              )
+            })()}
+
+            {/* Form de Novo Abatimento */}
+            <form onSubmit={handleAddPayment} className="p-5 bg-black/40 border border-white/10 rounded-lg space-y-4">
+              <h4 className="text-xs font-sans font-bold text-brand-gold uppercase tracking-wider flex items-center gap-1.5">
+                <Plus className="w-4 h-4" />
+                Registrar Novo Abatimento
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-sans text-brand-silver uppercase tracking-wider mb-1">Valor do Pagamento (R$) *</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-silver text-xs font-mono">R$</span>
+                    <input
+                      type="number"
+                      required
+                      step="0.01"
+                      min="0.01"
+                      value={paymentAmountInput}
+                      onChange={(e) => setPaymentAmountInput(e.target.value)}
+                      placeholder="0.00"
+                      className="w-full bg-black border border-white/15 rounded pl-10 pr-4 py-2.5 text-xs font-sans text-white focus:outline-none focus:border-brand-gold"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-sans text-brand-silver uppercase tracking-wider mb-1">Data do Pagamento *</label>
+                  <input
+                    type="date"
+                    required
+                    value={paymentDateInput}
+                    onChange={(e) => setPaymentDateInput(e.target.value)}
+                    className="w-full bg-black border border-white/15 rounded px-4 py-2.5 text-xs font-sans text-white focus:outline-none focus:border-brand-gold"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-sans text-brand-silver uppercase tracking-wider mb-1">Forma de Pagamento / Observação</label>
+                <input
+                  type="text"
+                  value={paymentNotesInput}
+                  onChange={(e) => setPaymentNotesInput(e.target.value)}
+                  placeholder="Ex: PIX, Dinheiro em mãos, Transferência..."
+                  className="w-full bg-black border border-white/15 rounded px-4 py-2.5 text-xs font-sans text-white focus:outline-none focus:border-brand-gold"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={paymentSubmitLoading}
+                className="w-full flex items-center justify-center gap-2 py-3 bg-brand-gold text-black font-sans font-bold text-xs uppercase tracking-wider rounded hover:opacity-90 transition-all disabled:opacity-50"
+              >
+                {paymentSubmitLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Registrando abatimento...
+                  </>
+                ) : (
+                  'Confirmar e Abater Valor'
+                )}
+              </button>
+            </form>
+
+            {/* Extrato / Histórico de Abatimentos */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-sans font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <Receipt className="w-4 h-4 text-brand-gold" />
+                Histórico de Lançamentos
+              </h4>
+
+              {(() => {
+                const movPayments = paymentsMap[paymentMovement.id] || []
+                if (movPayments.length === 0) {
+                  return (
+                    <div className="p-6 text-center border border-dashed border-white/10 rounded-lg">
+                      <p className="text-xs font-sans text-brand-silver">Nenhum abatimento individual registrado até o momento.</p>
+                    </div>
+                  )
+                }
+
+                return (
+                  <div className="border border-white/10 rounded-lg overflow-hidden bg-black/30">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-white/10 bg-white/[0.02] text-[10px] font-sans text-brand-silver uppercase">
+                          <th className="p-3">Data</th>
+                          <th className="p-3">Valor Abatido</th>
+                          <th className="p-3">Observação</th>
+                          <th className="p-3 text-right">Ação</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/10 text-slate-200">
+                        {movPayments.map((p) => (
+                          <tr key={p.id} className="hover:bg-white/[0.02]">
+                            <td className="p-3 font-mono text-brand-silver">
+                              {new Date(p.payment_date).toLocaleDateString('pt-BR')}
+                            </td>
+                            <td className="p-3 font-mono font-bold text-green-400">
+                              {formatPrice(p.amount)}
+                            </td>
+                            <td className="p-3 text-brand-silver">
+                              {p.notes || '-'}
+                            </td>
+                            <td className="p-3 text-right">
+                              <button
+                                onClick={() => handleDeletePaymentItem(p.id)}
+                                className="p-1.5 text-brand-silver hover:text-red-400 bg-white/5 border border-white/10 hover:border-red-500/30 rounded transition-colors"
+                                title="Cancelar Lançamento"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
+

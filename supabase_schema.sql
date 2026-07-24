@@ -182,3 +182,17 @@ CREATE POLICY "Permitir leitura pública de produtos da campanha" ON campaign_pr
 CREATE POLICY "Permitir gerencimento de campanhas para admins" ON campaigns FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Permitir gerencimento de produtos da campanha para admins" ON campaign_products FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
+-- 14. TABELA DE HISTÓRICO DE PAGAMENTOS E ABATIMENTOS DAS MOVIMENTAÇÕES
+CREATE TABLE IF NOT EXISTS movement_payments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    movement_id UUID REFERENCES product_movements(id) ON DELETE CASCADE NOT NULL,
+    amount NUMERIC(12, 2) NOT NULL,
+    payment_date TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+ALTER TABLE movement_payments ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Permitir leitura pública de pagamentos da movimentação" ON movement_payments FOR SELECT USING (true);
+CREATE POLICY "Permitir gerencimento de pagamentos para admins" ON movement_payments FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
