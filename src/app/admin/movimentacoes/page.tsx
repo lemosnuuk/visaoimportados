@@ -21,7 +21,8 @@ import {
   CalendarRange,
   Download,
   Users,
-  FileText
+  FileText,
+  Edit2
 } from 'lucide-react'
 
 interface Product {
@@ -69,6 +70,7 @@ export default function AdminMovimentacoesPage() {
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingMovementId, setEditingMovementId] = useState<string | null>(null)
 
   // Reports Panel States
   const [isReportsModalOpen, setIsReportsModalOpen] = useState(false)
@@ -210,6 +212,7 @@ export default function AdminMovimentacoesPage() {
   }
 
   const handleOpenModal = () => {
+    setEditingMovementId(null)
     // Reset Form
     if (products.length > 0) setProductId(products[0].id)
     setType('entrada')
@@ -227,6 +230,29 @@ export default function AdminMovimentacoesPage() {
     setIsModalOpen(true)
   }
 
+  const handleEditMovement = (m: Movement) => {
+    setEditingMovementId(m.id)
+    setProductId(m.product_id)
+    setType(m.type)
+    setQuantity(String(m.quantity))
+    const formattedDate = m.movement_date ? new Date(m.movement_date).toISOString().substring(0, 10) : new Date().toISOString().substring(0, 10)
+    setMovementDate(formattedDate)
+    setCostPrice(m.cost_price !== null && m.cost_price !== undefined ? String(m.cost_price) : '')
+    setSalePrice(m.sale_price !== null && m.sale_price !== undefined ? String(m.sale_price) : '')
+    setCustomerName(m.customer_name || '')
+    setNotes(m.notes || '')
+    setPaymentType(m.payment_type || 'vista')
+    setInstallmentsTotal(String(m.installments_total || 1))
+    setInstallmentsPaid(String(m.installments_paid || 0))
+    if (m.profit_percentage !== null) {
+      setCalculatedProfit(m.profit_percentage)
+    } else {
+      setCalculatedProfit(null)
+    }
+    setLastCostPriceMsg('')
+    setIsModalOpen(true)
+  }
+
   const handleCreateMovement = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!productId || !quantity || (type === 'entrada' && !costPrice) || (type === 'saida' && !salePrice)) {
@@ -240,8 +266,16 @@ export default function AdminMovimentacoesPage() {
     if (type === 'saida') {
       const selectedProd = products.find(p => p.id === productId)
       const currentStock = selectedProd?.stock_quantity || 0
-      if (qty > currentStock) {
-        alert(`Erro: Estoque insuficiente. O produto "${selectedProd?.name}" possui apenas ${currentStock} unidades em estoque, mas você tentou registrar a saída de ${qty} unidades.`)
+      let availableForCheck = currentStock
+      // Se estiver editando uma movimentação do mesmo produto que já era saída, soma de volta a quantidade anterior
+      if (editingMovementId) {
+        const originalMov = movements.find(m => m.id === editingMovementId)
+        if (originalMov && originalMov.product_id === productId && originalMov.type === 'saida') {
+          availableForCheck += originalMov.quantity
+        }
+      }
+      if (qty > availableForCheck) {
+        alert(`Erro: Estoque insuficiente. O produto "${selectedProd?.name}" possui ${currentStock} unidades em estoque, mas você tentou registrar a saída de ${qty} unidades.`)
         return
       }
     }
@@ -282,19 +316,30 @@ export default function AdminMovimentacoesPage() {
         payment_status: type === 'saida' ? finalPaymentStatus : 'pago'
       }
 
-      const { error } = await supabase
-        .from('product_movements')
-        .insert([payload])
+      let saveError = null
+      if (editingMovementId) {
+        const { error } = await supabase
+          .from('product_movements')
+          .update(payload)
+          .eq('id', editingMovementId)
+        saveError = error
+      } else {
+        const { error } = await supabase
+          .from('product_movements')
+          .insert([payload])
+        saveError = error
+      }
 
-      if (error) {
-        alert('Erro ao registrar movimentação: ' + error.message)
+      if (saveError) {
+        alert('Erro ao salvar movimentação: ' + saveError.message)
       } else {
         setIsModalOpen(false)
+        setEditingMovementId(null)
         fetchInitialData()
       }
     } catch (err) {
       console.error(err)
-      alert('Erro inesperado ao cadastrar movimentação.')
+      alert('Erro inesperado ao salvar movimentação.')
     } finally {
       setSubmitLoading(false)
     }
@@ -1044,6 +1089,13 @@ export default function AdminMovimentacoesPage() {
                           </button>
                         )}
                         <button
+                          onClick={() => handleEditMovement(m)}
+                          className="p-2 text-brand-silver hover:text-brand-gold bg-white/5 border border-white/10 hover:border-brand-gold/40 rounded transition-colors"
+                          title="Editar Movimentação"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
                           onClick={() => handleDeleteMovement(m.id)}
                           className="p-2 text-brand-silver hover:text-red-500 bg-white/5 border border-white/10 hover:border-red-500/20 rounded transition-colors"
                           title="Excluir Movimentação"
@@ -1173,9 +1225,11 @@ export default function AdminMovimentacoesPage() {
             <div>
               <h3 className="font-title text-lg text-white uppercase tracking-wide flex items-center gap-2">
                 <ArrowRightLeft className="w-5 h-5 text-brand-gold" />
-                Registrar Movimentação
+                {editingMovementId ? 'Editar Movimentação' : 'Registrar Movimentação'}
               </h3>
-              <p className="font-sans text-[11px] text-brand-silver mt-1">Lançamento automático de fluxo de entrada/saída do estoque</p>
+              <p className="font-sans text-[11px] text-brand-silver mt-1">
+                {editingMovementId ? 'Atualização de lançamento no fluxo de estoque' : 'Lançamento automático de fluxo de entrada/saída do estoque'}
+              </p>
             </div>
 
             <form onSubmit={handleCreateMovement} className="space-y-5">
@@ -1455,7 +1509,7 @@ export default function AdminMovimentacoesPage() {
                       Salvando lançamento...
                     </>
                   ) : (
-                    'Salvar Lançamento'
+                    editingMovementId ? 'Salvar Alterações' : 'Salvar Lançamento'
                   )}
                 </button>
                 <button

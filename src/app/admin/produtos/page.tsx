@@ -43,6 +43,7 @@ export default function AdminProdutosPage() {
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('')
+  const [selectedBrand, setSelectedBrand] = useState('all')
   const [selectedCategory, setSelectedCategory] = useState('all')
 
   const supabase = createClient()
@@ -153,12 +154,18 @@ export default function AdminProdutosPage() {
     }).format(price)
   }
 
+  // Extract unique available brands from products
+  const availableBrands = Array.from(
+    new Set(products.map((p) => p.brand).filter((b): b is string => Boolean(b)))
+  ).sort()
+
   // Filter products locally for instant response
   const filteredProducts = products.filter((p) => {
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           (p.brand && p.brand.toLowerCase().includes(searchTerm.toLowerCase()))
+    const matchesBrand = selectedBrand === 'all' || (p.brand && p.brand.toLowerCase() === selectedBrand.toLowerCase())
     const matchesCategory = selectedCategory === 'all' || p.category_name === selectedCategory
-    return matchesSearch && matchesCategory
+    return matchesSearch && matchesBrand && matchesCategory
   })
 
   const getStatusBadge = (status: string) => {
@@ -193,26 +200,42 @@ export default function AdminProdutosPage() {
       </div>
 
       {/* FILTER BAR */}
-      <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center justify-between">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
         {/* Search */}
-        <div className="relative flex-grow max-w-xl">
+        <div className="relative">
           <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Buscar produto pelo nome ou marca..."
+            placeholder="Buscar por nome ou marca..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full bg-brand-black border border-white/15 rounded px-11 py-3 text-sm font-sans focus:outline-none focus:border-brand-gold text-white"
           />
         </div>
 
-        {/* Category select filter */}
-        <div className="flex items-center gap-4">
+        {/* Brand select filter */}
+        <div className="flex items-center gap-3">
           <SlidersHorizontal className="w-4 h-4 text-brand-gold shrink-0" />
+          <select
+            value={selectedBrand}
+            onChange={(e) => setSelectedBrand(e.target.value)}
+            className="w-full bg-brand-black border border-white/15 text-sm font-sans text-white rounded px-4 py-3 focus:outline-none focus:border-brand-gold cursor-pointer"
+          >
+            <option value="all">Todas as Marcas</option>
+            {availableBrands.map((b) => (
+              <option key={b} value={b}>
+                {b}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Category select filter */}
+        <div className="flex items-center gap-3">
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="bg-brand-black border border-white/15 text-sm font-sans text-white rounded px-4 py-3 focus:outline-none focus:border-brand-gold cursor-pointer min-w-48"
+            className="w-full bg-brand-black border border-white/15 text-sm font-sans text-white rounded px-4 py-3 focus:outline-none focus:border-brand-gold cursor-pointer"
           >
             <option value="all">Todas as Categorias</option>
             {categories.map((c) => (
