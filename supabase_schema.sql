@@ -196,3 +196,84 @@ ALTER TABLE movement_payments ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Permitir leitura pública de pagamentos da movimentação" ON movement_payments FOR SELECT USING (true);
 CREATE POLICY "Permitir gerencimento de pagamentos para admins" ON movement_payments FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
+-- 15. FUNÇÃO E TRIGGER PARA ATUALIZAÇÃO AUTOMÁTICA DO STATUS E ESTOQUE DOS PRODUTOS
+CREATE OR REPLACE FUNCTION update_product_stock_and_status()
+RETURNS TRIGGER AS $$
+DECLARE
+    target_product_id UUID;
+    total_entrada NUMERIC;
+    total_saida NUMERIC;
+    current_stock NUMERIC;
+BEGIN
+    -- Identifica o product_id afetado (seja INSERT, UPDATE ou DELETE)
+    IF (TG_OP = 'DELETE') THEN
+        target_product_id := OLD.product_id;
+    ELSE
+        target_product_id := NEW.product_id;
+    END IF;
+
+    -- Soma das entradas do produto
+    SELECT COALESCE(SUM(quantity), 0)
+    INTO total_entrada
+    FROM product_movements
+    WHERE product_id = target_product_id AND type = 'entrada';
+
+    -- Soma das saídas do produto
+    SELECT COALESCE(SUM(quantity), 0)
+    INTO total_saida
+    FROM product_movements
+    WHERE product_id = target_product_id AND type = 'saida';
+
+    -- Calcula o estoque atual
+    current_stock := total_entrada - total_saida;
+
+    -- Atualiza o status do produto:
+    -- Se o estoque for > 0 -> 'in_stock' (Em Estoque)
+    -- Se o estoque for <= 0 -> 'pre_order' (Sob Encomenda)
+    -- (Preserva o status 'on_request' caso o produto seja especificamente Sob Consulta)
+    UPDATE products
+    SET 
+        status = CASE 
+            WHEN current_stock > 0 THEN 'in_stock'
+            ELSE 'pre_order'
+        END,
+        updated_at = timezone('utc'::text, now())
+    WHERE id = target_product_id
+      AND status != 'on_request';
+
+    -- Trata mudança de produto no UPDATE de uma movimentação (caso mude o produto associado)
+    IF (TG_OP = 'UPDATE' AND OLD.product_id IS DISTINCT FROM NEW.product_id) THEN
+        SELECT COALESCE(SUM(quantity), 0) INTO total_entrada FROM product_movements WHERE product_id = OLD.product_id AND type = 'entrada';
+        SELECT COALESCE(SUM(quantity), 0) INTO total_saida FROM product_movements WHERE product_id = OLD.product_id AND type = 'saida';
+        
+        UPDATE products
+        SET status = CASE WHEN (total_entrada - total_saida) > 0 THEN 'in_stock' ELSE 'pre_order' END,
+            updated_at = timezone('utc'::text, now())
+        WHERE id = OLD.product_id AND status != 'on_request';
+    END IF;
+
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger disparado após qualquer INSERT, UPDATE ou DELETE em product_movements
+DROP TRIGGER IF EXISTS trg_update_product_stock_status ON product_movements;
+
+CREATE TRIGGER trg_update_product_stock_status
+AFTER INSERT OR UPDATE OR DELETE ON product_movements
+FOR EACH ROW
+EXECUTE FUNCTION update_product_stock_and_status();
+
+-- Atualização única para recalcular e recalibrar o status de todos os produtos existentes
+UPDATE products p
+SET status = CASE 
+    WHEN COALESCE((
+        SELECT SUM(CASE WHEN type = 'entrada' THEN quantity ELSE -quantity END)
+        FROM product_movements
+        WHERE product_id = p.id
+    ), 0) > 0 THEN 'in_stock'
+    ELSE 'pre_order'
+END
+WHERE p.status != 'on_request';
+
+

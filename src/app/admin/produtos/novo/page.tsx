@@ -171,6 +171,9 @@ export default function AdminNovoProdutoPage() {
       const parsedPrice = price.trim() ? parseFloat(price) : null
       const parsedSalePrice = salePrice.trim() ? parseFloat(salePrice) : null
 
+      const parsedStock = parseInt(initialStock) || 0
+      const finalStatus = status === 'on_request' ? 'on_request' : (parsedStock > 0 ? 'in_stock' : 'pre_order')
+
       // 1. Create product record
       const { data: productData, error: productError } = await supabase
         .from('products')
@@ -182,7 +185,7 @@ export default function AdminNovoProdutoPage() {
           price: parsedPrice,
           sale_price: parsedSalePrice,
           description,
-          status,
+          status: finalStatus,
           featured,
           display_order: parseInt(displayOrder) || 0
         }])
@@ -197,7 +200,6 @@ export default function AdminNovoProdutoPage() {
       const newProduct = productData[0]
 
       // 1.5. Registrar estoque inicial se preenchido
-      const parsedStock = parseInt(initialStock) || 0
       if (parsedStock > 0) {
         const parsedCost = parseFloat(initialCost) || 0
         const { error: movementError } = await supabase
