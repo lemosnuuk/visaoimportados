@@ -202,10 +202,16 @@
 
 /* Print Optimization for Reports */
 @media print {
+  @page {
+    size: A4 landscape;
+    margin: 10mm 12mm;
+  }
+
   body, html {
     background-color: #ffffff !important;
-    color: #000000 !important;
+    color: #111111 !important;
     background-image: none !important;
+    font-size: 10px !important;
   }
 
   /* Hide non-report layout structures */
@@ -217,7 +223,7 @@
   .fixed, [class*="backdrop-blur"] {
     position: relative !important;
     background: #ffffff !important;
-    color: #000000 !important;
+    color: #111111 !important;
     inset: auto !important;
     padding: 0 !important;
     backdrop-filter: none !important;
@@ -225,31 +231,98 @@
 
   .bg-brand-black {
     background-color: #ffffff !important;
-    color: #000000 !important;
+    color: #111111 !important;
     border: none !important;
   }
 
   /* Force printable text readability and border contrast */
   .text-white, .text-brand-silver, .text-brand-white, .text-brand-gold, .text-brand-gold-light, .text-green-400 {
-    color: #000000 !important;
+    color: #111111 !important;
   }
 
-  .bg-white\/\[0\.02\], .bg-black\/35, .bg-black\/40 {
-    background-color: #ffffff !important;
-    border: 1px solid #e5e7eb !important;
+  .bg-white\/\[0\.02\], .bg-black\/35, .bg-black\/40, .bg-white\/\[0\.03\], .bg-black\/50 {
+    background-color: #f9f9f9 !important;
+    border: 1px solid #e0e0e0 !important;
   }
 
+  /* Compact tables for more rows per page */
   table {
     border-collapse: collapse !important;
     width: 100% !important;
+    font-size: 9px !important;
   }
 
-  th, td {
-    border-bottom: 1px solid #e5e7eb !important;
-    color: #000000 !important;
+  th {
+    padding: 4px 6px !important;
+    border-bottom: 1.5px solid #aaa !important;
+    color: #333 !important;
+    font-size: 8px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+    background: #f0f0f0 !important;
+  }
+
+  td {
+    padding: 3px 6px !important;
+    border-bottom: 1px solid #e0e0e0 !important;
+    color: #111111 !important;
+    line-height: 1.3 !important;
   }
 
   tr:hover {
     background-color: transparent !important;
+  }
+
+  /* Summary cards compact */
+  .grid {
+    gap: 6px !important;
+  }
+
+  /* Reduce heading sizes */
+  h1, h2, h3, h4 {
+    font-size: 12px !important;
+    margin-bottom: 4px !important;
+  }
+
+  /* Compact padding for cards */
+  .p-5, .p-6, .p-8 {
+    padding: 6px 8px !important;
+  }
+
+  .p-4 {
+    padding: 3px 6px !important;
+  }
+
+  /* space-y utilities */
+  .space-y-6 > * + * {
+    margin-top: 6px !important;
+  }
+
+  .space-y-4 > * + * {
+    margin-top: 4px !important;
+  }
+
+  /* Text-3xl for stat numbers */
+  .text-3xl {
+    font-size: 14px !important;
+    margin-top: 2px !important;
+  }
+
+  /* Avoid page breaks inside rows */
+  tr {
+    page-break-inside: avoid !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  /* Ensure overflow-hidden tables print all rows */
+  .overflow-hidden {
+    overflow: visible !important;
+  }
+
+  .rounded-lg {
+    border-radius: 3px !important;
   }
 }

@@ -276,4 +276,6 @@ SET status = CASE
 END
 WHERE p.status != 'on_request';
 
+-- 16. COLUNA DE IMAGEM PARA CATEGORIAS
+ALTER TABLE categories ADD COLUMN IF NOT EXISTS image_url TEXT;
 
