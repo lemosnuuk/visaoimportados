@@ -17,6 +17,7 @@ import {
   ArrowRightLeft,
   Sparkles
 } from 'lucide-react'
+import { HostingAlertBanner } from '@/components/admin/hosting-alert-banner'
 
 export default function AdminLayout({
   children,
@@ -59,7 +60,9 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="bg-black min-h-screen text-foreground flex flex-col md:flex-row">
+    <div className="bg-black min-h-screen text-foreground flex flex-col">
+      <HostingAlertBanner />
+      <div className="flex flex-col md:flex-row flex-grow">
       {/* MOBILE HEADER */}
       <header className="md:hidden w-full bg-brand-black border-b border-white/5 px-6 py-4 flex items-center justify-between z-40">
         <div className="flex items-center gap-3">
@@ -194,6 +197,7 @@ export default function AdminLayout({
       <main className="flex-grow p-6 md:p-12 overflow-x-hidden">
         {children}
       </main>
+    </div>
     </div>
   )
 }
