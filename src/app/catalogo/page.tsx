@@ -509,6 +509,12 @@ function CatalogContent() {
                               </span>
                             </div>
                           )}
+                          
+                          {product.status !== 'on_request' && product.price && (
+                            <p className="text-[8px] font-sans text-brand-silver/70 leading-tight mt-1">
+                              À vista (PIX). Cartão c/ taxa.
+                            </p>
+                          )}
                         </div>
 
                         <button

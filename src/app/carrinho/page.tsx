@@ -14,6 +14,7 @@ export default function CartPage() {
   // Form State
   const [nome, setNome] = useState('')
   const [telefone, setTelefone] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState('Pix')
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -49,7 +50,8 @@ export default function CartPage() {
       `${itemsList}\n\n` +
       `*Total estimado:* ${totalText}\n\n` +
       `👤 *Nome:* ${nome}\n` +
-      `📞 *Telefone:* ${telefone}\n\n` +
+      `📞 *Telefone:* ${telefone}\n` +
+      `💳 *Pretende pagar via:* ${paymentMethod}\n\n` +
       `Aguardo confirmação e instruções para a importação e entrega.`
     )
 
@@ -216,15 +218,28 @@ export default function CartPage() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-sans text-brand-gold uppercase tracking-widest mb-2">WhatsApp de Contato *</label>
+                    <label className="block text-[10px] font-sans text-brand-gold uppercase tracking-widest mb-2">Telefone / WhatsApp *</label>
                     <input
                       type="tel"
                       required
-                      placeholder="Ex: (18) 99719-0799"
                       value={telefone}
                       onChange={(e) => setTelefone(e.target.value)}
-                      className="w-full bg-black border border-white/10 rounded px-4 py-3 text-xs font-sans focus:outline-none focus:border-brand-gold text-white"
+                      placeholder="(11) 99999-9999"
+                      className="w-full bg-white/5 border border-white/10 rounded px-4 py-3 text-xs font-sans focus:outline-none focus:border-brand-gold text-white"
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-sans text-brand-gold uppercase tracking-widest mb-2">Forma de Pagamento Desejada</label>
+                    <select
+                      value={paymentMethod}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded px-4 py-3 text-xs font-sans focus:outline-none focus:border-brand-gold text-white appearance-none cursor-pointer"
+                    >
+                      <option value="Pix">Pix (À vista)</option>
+                      <option value="Dinheiro">Dinheiro (À vista)</option>
+                      <option value="Cartão de Crédito">Cartão de Crédito (Sujeito a taxas)</option>
+                    </select>
                   </div>
 
                   <button

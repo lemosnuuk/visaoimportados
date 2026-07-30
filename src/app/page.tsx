@@ -51,6 +51,7 @@ interface Category {
   id: string
   name: string
   slug: string
+  image_url?: string | null
 }
 
 // Category visual covers mapping
@@ -252,7 +253,7 @@ export default function Home() {
         // 1. Fetch Categories
         const { data: dbCategories, error: catError } = await supabase
           .from('categories')
-          .select('id, name, slug')
+          .select('id, name, slug, image_url')
           .order('name')
         
         // 2. Fetch Featured Products with their images
@@ -664,7 +665,7 @@ export default function Home() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {categories.slice(0, 9).map((cat) => {
               // Find matching visual image
-              const imgUrl = CATEGORY_IMAGES[cat.slug] || DEFAULT_CATEGORY_IMAGE
+              const imgUrl = cat.image_url || CATEGORY_IMAGES[cat.slug] || DEFAULT_CATEGORY_IMAGE
               return (
                 <Link
                   key={cat.id}
@@ -801,6 +802,12 @@ export default function Home() {
                               {formatPrice(product.price)}
                             </span>
                           </div>
+                        )}
+                        
+                        {product.status !== 'on_request' && product.price && (
+                          <p className="text-[8px] font-sans text-brand-silver/70 leading-tight mt-1">
+                            À vista (PIX). Cartão c/ taxa.
+                          </p>
                         )}
                       </div>
 

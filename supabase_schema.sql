@@ -279,3 +279,44 @@ WHERE p.status != 'on_request';
 -- 16. COLUNA DE IMAGEM PARA CATEGORIAS
 ALTER TABLE categories ADD COLUMN IF NOT EXISTS image_url TEXT;
 
+ 
+ - -   1 7 .   T A B E L A   D E   C L I E N T E S  
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   c u s t o m e r s   (  
+         i d   U U I D   P R I M A R Y   K E Y   D E F A U L T   g e n _ r a n d o m _ u u i d ( ) ,  
+         n a m e   T E X T   N O T   N U L L   U N I Q U E ,  
+         p h o n e   T E X T ,  
+         e m a i l   T E X T ,  
+         c r e a t e d _ a t   T I M E S T A M P T Z   D E F A U L T   N O W ( )   N O T   N U L L  
+ ) ;  
+  
+ A L T E R   T A B L E   c u s t o m e r s   E N A B L E   R O W   L E V E L   S E C U R I T Y ;  
+ C R E A T E   P O L I C Y   \  
+ P e r m i t i r  
+ l e i t u r a  
+ p u b l i c a  
+ d e  
+ c l i e n t e s \   O N   c u s t o m e r s   F O R   S E L E C T   U S I N G   ( t r u e ) ;  
+ C R E A T E   P O L I C Y   \  
+ P e r m i t i r  
+ g e r e n c i m e n t o  
+ d e  
+ c l i e n t e s  
+ p a r a  
+ a d m i n s \   O N   c u s t o m e r s   F O R   A L L   T O   a u t h e n t i c a t e d   U S I N G   ( t r u e )   W I T H   C H E C K   ( t r u e ) ;  
+  
+ - -   M I G R A C A O   D E   D A D O S :   I N S E R E   C L I E N T E S   E X I S T E N T E S   D A S   M O V I M E N T A C O E S  
+ I N S E R T   I N T O   c u s t o m e r s   ( n a m e )  
+ S E L E C T   D I S T I N C T   c u s t o m e r _ n a m e  
+ F R O M   p r o d u c t _ m o v e m e n t s  
+ W H E R E   c u s t o m e r _ n a m e   I S   N O T   N U L L   A N D   c u s t o m e r _ n a m e   ! =   ' '  
+ O N   C O N F L I C T   ( n a m e )   D O   N O T H I N G ;  
+  
+ - -   A D I C I O N A   V I N C U L O   N A   T A B E L A   D E   M O V I M E N T A C O E S  
+ A L T E R   T A B L E   p r o d u c t _ m o v e m e n t s   A D D   C O L U M N   I F   N O T   E X I S T S   c u s t o m e r _ i d   U U I D   R E F E R E N C E S   c u s t o m e r s ( i d )   O N   D E L E T E   S E T   N U L L ;  
+  
+ - -   A T U A L I Z A   O   V I N C U L O   D O S   R E G I S T R O S   E X I S T E N T E S  
+ U P D A T E   p r o d u c t _ m o v e m e n t s   p m  
+ S E T   c u s t o m e r _ i d   =   c . i d  
+ F R O M   c u s t o m e r s   c  
+ W H E R E   p m . c u s t o m e r _ n a m e   =   c . n a m e ;  
+ 

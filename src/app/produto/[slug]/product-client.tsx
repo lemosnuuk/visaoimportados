@@ -7,7 +7,7 @@ import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 import { useCart } from '@/components/cart-context'
 import { createClient } from '@/lib/supabase/client'
-import { ShoppingBag, ArrowLeft, Send, Check, Camera, Sparkles } from 'lucide-react'
+import { ShoppingBag, ArrowLeft, Send, Check, Camera, Sparkles, X } from 'lucide-react'
 
 interface Product {
   id: string
@@ -31,7 +31,12 @@ interface Product {
 
 export default function ProductClientPage({ product }: { product: Product }) {
   const { addToCart } = useCart()
-  const [activeImage, setActiveImage] = useState(product.images[0] || product.image_url)
+  const [activeImage, setActiveImage] = useState(product.images?.[0] || product.image_url || '')
+  
+  // WhatsApp direct buy modal state
+  const [isBuyModalOpen, setIsBuyModalOpen] = useState(false)
+  const [buyPaymentMethod, setBuyPaymentMethod] = useState('Pix')
+
   const [relatedProducts, setRelatedProducts] = useState<any[]>([])
   const [isAdded, setIsAdded] = useState(false)
 
@@ -100,9 +105,11 @@ export default function ProductClientPage({ product }: { product: Product }) {
       `Olá! Tenho interesse no seguinte produto exclusivo:\n\n` +
       `📦 *${product.name}*\n` +
       `🏷️ *Status:* ${getStatusText(product.status)}\n` +
-      `💰 *Preço:* ${priceText}\n\n` +
+      `💰 *Preço:* ${priceText}\n` +
+      `💳 *Pretende pagar via:* ${buyPaymentMethod}\n\n` +
       `Poderia me passar mais informações sobre disponibilidade e prazos?`
     )
+    setIsBuyModalOpen(false)
     window.open(`https://wa.me/${whatsappNumber}?text=${text}`, '_blank')
   }
 
@@ -298,6 +305,12 @@ export default function ProductClientPage({ product }: { product: Product }) {
                       </span>
                     )}
                   </div>
+                  
+                  {/* Pix / Cartão Info */}
+                  <div className="mt-2 text-xs font-sans text-brand-silver">
+                    Valores referentes ao pagamento à vista via PIX.<br/>
+                    Para pagamentos no cartão de crédito, consulte taxas.
+                  </div>
                 )}
                 <span className="text-[11px] font-sans text-slate-400 block mt-3">
                   * Valores sujeitos a alteração cambial ou de taxas aduaneiras.
@@ -316,8 +329,8 @@ export default function ProductClientPage({ product }: { product: Product }) {
               <div className="flex flex-col gap-3">
                 <div className="flex flex-col sm:flex-row gap-4">
                   <button
-                    onClick={handleDirectBuyWhatsApp}
-                    className="flex-1 flex items-center justify-center gap-2 py-4 bg-gold-gradient text-black font-sans font-bold text-xs uppercase tracking-widest rounded hover:opacity-95 transition-all duration-300 shadow-lg shadow-brand-gold/10"
+                    onClick={() => setIsBuyModalOpen(true)}
+                    className="w-full flex justify-center items-center gap-2 py-4 rounded-xl text-white font-sans font-bold uppercase tracking-widest transition-all duration-300 bg-white/5 border border-white/10 hover:border-brand-gold shadow-md hover:shadow-brand-gold/10 hover:bg-gold-gradient hover:text-black mt-3"
                   >
                     <Send className="w-4.5 h-4.5" />
                     {isPriceConsultable ? 'Consultar Valor no WhatsApp' : 'Comprar pelo WhatsApp'}
@@ -417,6 +430,69 @@ export default function ProductClientPage({ product }: { product: Product }) {
             </div>
           )}
         </div>
+        {/* WhatsApp Checkout Modal */}
+        {isBuyModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <div className="bg-brand-black border border-white/10 rounded-xl p-6 w-full max-w-sm flex flex-col relative gold-glow">
+              <button
+                onClick={() => setIsBuyModalOpen(false)}
+                className="absolute top-4 right-4 text-white/50 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              
+              <h3 className="font-title text-lg text-brand-gold-light uppercase tracking-wider mb-2">Comprar Agora</h3>
+              <p className="font-sans text-xs text-brand-silver mb-6">Como você gostaria de realizar o pagamento?</p>
+              
+              <div className="flex flex-col gap-4 mb-6">
+                <label className="flex items-center gap-3 p-3 border border-white/10 rounded-lg cursor-pointer hover:bg-white/5 transition-colors">
+                  <input 
+                    type="radio" 
+                    name="paymentMethod" 
+                    value="Pix" 
+                    checked={buyPaymentMethod === 'Pix'} 
+                    onChange={(e) => setBuyPaymentMethod(e.target.value)}
+                    className="accent-brand-gold w-4 h-4"
+                  />
+                  <span className="font-sans text-sm text-white">Pix (À vista)</span>
+                </label>
+                <label className="flex items-center gap-3 p-3 border border-white/10 rounded-lg cursor-pointer hover:bg-white/5 transition-colors">
+                  <input 
+                    type="radio" 
+                    name="paymentMethod" 
+                    value="Dinheiro" 
+                    checked={buyPaymentMethod === 'Dinheiro'} 
+                    onChange={(e) => setBuyPaymentMethod(e.target.value)}
+                    className="accent-brand-gold w-4 h-4"
+                  />
+                  <span className="font-sans text-sm text-white">Dinheiro (À vista)</span>
+                </label>
+                <label className="flex items-center gap-3 p-3 border border-white/10 rounded-lg cursor-pointer hover:bg-white/5 transition-colors">
+                  <input 
+                    type="radio" 
+                    name="paymentMethod" 
+                    value="Cartão de Crédito" 
+                    checked={buyPaymentMethod === 'Cartão de Crédito'} 
+                    onChange={(e) => setBuyPaymentMethod(e.target.value)}
+                    className="accent-brand-gold w-4 h-4"
+                  />
+                  <div className="flex flex-col">
+                    <span className="font-sans text-sm text-white">Cartão de Crédito</span>
+                    <span className="font-sans text-[10px] text-brand-silver">Sujeito a taxas. Consulte no atendimento.</span>
+                  </div>
+                </label>
+              </div>
+
+              <button
+                onClick={handleDirectBuyWhatsApp}
+                className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-green-600 hover:bg-green-500 rounded-lg text-white font-sans font-bold uppercase tracking-wider transition-all duration-300 shadow-md shadow-green-600/20"
+              >
+                <ShoppingBag className="w-5 h-5" />
+                Continuar para WhatsApp
+              </button>
+            </div>
+          </div>
+        )}
       </main>
 
       <Footer />

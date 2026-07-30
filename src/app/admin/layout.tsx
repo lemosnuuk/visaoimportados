@@ -15,9 +15,9 @@ import {
   X, 
   ShieldCheck,
   ArrowRightLeft,
-  Sparkles
+  Sparkles,
+  Users
 } from 'lucide-react'
-import { HostingAlertBanner } from '@/components/admin/hosting-alert-banner'
 
 export default function AdminLayout({
   children,
@@ -50,6 +50,7 @@ export default function AdminLayout({
     { href: '/admin/categorias', label: 'Categorias', icon: Tag },
     { href: '/admin/campanhas', label: 'Campanhas', icon: Sparkles },
     { href: '/admin/movimentacoes', label: 'Movimentações', icon: ArrowRightLeft },
+    { href: '/admin/clientes', label: 'Clientes', icon: Users },
   ]
 
   const isLinkActive = (href: string) => {
@@ -61,7 +62,7 @@ export default function AdminLayout({
 
   return (
     <div className="bg-black min-h-screen text-foreground flex flex-col">
-      <HostingAlertBanner />
+
       <div className="flex flex-col md:flex-row flex-grow">
       {/* MOBILE HEADER */}
       <header className="md:hidden w-full bg-brand-black border-b border-white/5 px-6 py-4 flex items-center justify-between z-40">

@@ -33,6 +33,8 @@ interface Product {
   id: string
   name: string
   price: number
+  sale_price?: number | null
+  effective_price?: number
   stock_quantity?: number
   brand?: string | null
   categories?: { name: string } | { name: string }[] | null
@@ -48,6 +50,7 @@ interface Movement {
   sale_price: number | null
   profit_percentage: number | null
   customer_name: string | null
+  customer_id: string | null
   notes: string | null
   payment_type: 'vista' | 'parcelado' | null
   installments_total: number
@@ -57,6 +60,9 @@ interface Movement {
   products: {
     name: string
     price: number
+  } | null
+  customers?: {
+    name: string
   } | null
 }
 
@@ -72,6 +78,7 @@ interface MovementPayment {
 export default function AdminMovimentacoesPage() {
   const [movements, setMovements] = useState<Movement[]>([])
   const [products, setProducts] = useState<Product[]>([])
+  const [customersList, setCustomersList] = useState<{id: string, name: string}[]>([])
   const [loading, setLoading] = useState(true)
   const [submitLoading, setSubmitLoading] = useState(false)
 
@@ -100,6 +107,7 @@ export default function AdminMovimentacoesPage() {
   const [reportStartDate, setReportStartDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().substring(0, 10))
   const [reportEndDate, setReportEndDate] = useState(new Date().toISOString().substring(0, 10))
   const [reportProductId, setReportProductId] = useState('')
+  const [reportCustomerId, setReportCustomerId] = useState('all')
   
   // New Movement Form States
   const [productId, setProductId] = useState('')
@@ -109,6 +117,7 @@ export default function AdminMovimentacoesPage() {
   const [costPrice, setCostPrice] = useState('')
   const [salePrice, setSalePrice] = useState('')
   const [customerName, setCustomerName] = useState('')
+  const [customerId, setCustomerId] = useState('')
   const [notes, setNotes] = useState('')
   const [paymentType, setPaymentType] = useState<'vista' | 'parcelado'>('vista')
   const [installmentsTotal, setInstallmentsTotal] = useState('1')
@@ -158,6 +167,9 @@ export default function AdminMovimentacoesPage() {
           products (
             name,
             price
+          ),
+          customers (
+            name
           )
         `)
         .order('movement_date', { ascending: false })
@@ -170,17 +182,48 @@ export default function AdminMovimentacoesPage() {
       const { data: dbProducts, error: pErr } = await supabase
         .from('products')
         .select(`
-          id, name, price, stock_quantity, brand,
+          id, name, price, sale_price, stock_quantity, brand,
           categories(name)
         `)
         .order('name')
 
       if (pErr) throw pErr
+
+      try {
+        const { data: dbCust } = await supabase.from('customers').select('id, name').order('name')
+        if (dbCust) setCustomersList(dbCust)
+      } catch (e) { console.error('Error fetching customers', e) }
+
+      let cPrices: Record<string, number> = {}
+      try {
+        const nowIso = new Date().toISOString()
+        const { data: dbActiveCamps } = await supabase
+          .from('campaigns')
+          .select('campaign_products(product_id, campaign_price)')
+          .eq('is_active', true)
+          .lte('start_date', nowIso)
+          .gte('end_date', nowIso)
+        
+        if (dbActiveCamps) {
+          dbActiveCamps.forEach((camp: any) => {
+            if (camp.campaign_products) {
+              camp.campaign_products.forEach((cp: any) => {
+                if (cp.campaign_price) cPrices[cp.product_id] = Number(cp.campaign_price)
+              })
+            }
+          })
+        }
+      } catch (e) { console.error('Error fetching campaigns', e) }
+
       if (dbProducts) {
-        setProducts(dbProducts)
-        if (dbProducts.length > 0) {
-          setProductId(dbProducts[0].id)
-          setReportProductId(dbProducts[0].id)
+        const enrichedProducts = dbProducts.map((p: any) => ({
+          ...p,
+          effective_price: cPrices[p.id] || p.sale_price || p.price
+        }))
+        setProducts(enrichedProducts)
+        if (enrichedProducts.length > 0) {
+          setProductId(enrichedProducts[0].id)
+          setReportProductId(enrichedProducts[0].id)
         }
       }
 
@@ -416,6 +459,7 @@ export default function AdminMovimentacoesPage() {
     setCostPrice('')
     setSalePrice('')
     setCustomerName('')
+    setCustomerId('')
     setNotes('')
     setPaymentType('vista')
     setInstallmentsTotal('1')
@@ -435,6 +479,7 @@ export default function AdminMovimentacoesPage() {
     setCostPrice(m.cost_price !== null && m.cost_price !== undefined ? String(m.cost_price) : '')
     setSalePrice(m.sale_price !== null && m.sale_price !== undefined ? String(m.sale_price) : '')
     setCustomerName(m.customer_name || '')
+    setCustomerId(m.customer_id || '')
     setNotes(m.notes || '')
     setPaymentType(m.payment_type || 'vista')
     setInstallmentsTotal(String(m.installments_total || 1))
@@ -503,8 +548,9 @@ export default function AdminMovimentacoesPage() {
         cost_price: cost > 0 ? cost : null,
         sale_price: type === 'saida' ? sale : null,
         profit_percentage: type === 'saida' && calculatedProfit !== null ? calculatedProfit : null,
-        customer_name: type === 'saida' ? customerName : null,
-        notes: notes || null,
+        customer_name: type === 'saida' ? (customersList.find(c => c.id === customerId)?.name || customerName) : null,
+        customer_id: type === 'saida' ? (customerId || null) : null,
+        notes: notes.trim() || null,
         payment_type: type === 'saida' ? paymentType : null,
         installments_total: type === 'saida' && paymentType === 'parcelado' ? totalInst : 1,
         installments_paid: type === 'saida' && paymentType === 'parcelado' ? paidInst : (type === 'saida' ? 1 : 0),
@@ -597,7 +643,7 @@ export default function AdminMovimentacoesPage() {
   const filteredAndSortedMovements = movements
     .filter((m) => {
       const prodName = m.products?.name.toLowerCase() || ''
-      const custName = m.customer_name?.toLowerCase() || ''
+      const custName = (m.customers?.name || m.customer_name || '').toLowerCase()
 
       const matchesProduct = prodName.includes(searchProduct.toLowerCase())
       const matchesCustomer = custName.includes(searchCustomer.toLowerCase())
@@ -617,13 +663,13 @@ export default function AdminMovimentacoesPage() {
         return nameB.localeCompare(nameA)
       }
       if (sortBy === 'customer_asc') {
-        const nameA = a.customer_name || ''
-        const nameB = b.customer_name || ''
+        const nameA = a.customers?.name || a.customer_name || ''
+        const nameB = b.customers?.name || b.customer_name || ''
         return nameA.localeCompare(nameB)
       }
       if (sortBy === 'customer_desc') {
-        const nameA = a.customer_name || ''
-        const nameB = b.customer_name || ''
+        const nameA = a.customers?.name || a.customer_name || ''
+        const nameB = b.customers?.name || b.customer_name || ''
         return nameB.localeCompare(nameA)
       }
       if (sortBy === 'date_asc') {
@@ -640,13 +686,20 @@ export default function AdminMovimentacoesPage() {
 
     const reportMovements = movements.filter((m) => {
       const time = new Date(m.movement_date).getTime()
-      return time >= startDateTime && time <= endDateTime
+      const isDateOk = time >= startDateTime && time <= endDateTime
+      
+      let isCustOk = true
+      if (reportCustomerId !== 'all' && reportType !== 'estoque' && reportType !== 'produto_especifico') {
+        isCustOk = m.customer_id === reportCustomerId
+      }
+      
+      return isDateOk && isCustOk
     })
 
     if (reportType === 'estoque') {
       const totalCatalog = products.length
       const totalStockItems = products.reduce((acc, p) => acc + (p.stock_quantity || 0), 0)
-      const totalValuation = products.reduce((acc, p) => acc + ((p.stock_quantity || 0) * p.price), 0)
+      const totalValuation = products.reduce((acc, p) => acc + ((p.stock_quantity || 0) * (p.effective_price || 0)), 0)
 
       return (
         <div className="space-y-6">
@@ -683,15 +736,16 @@ export default function AdminMovimentacoesPage() {
                   const category = p.categories 
                     ? (Array.isArray(p.categories) ? p.categories[0]?.name : p.categories.name) || 'Sem Categoria'
                     : 'Sem Categoria'
-                  const total = p.price ? stock * p.price : 0
+                  const effPrice = p.effective_price || 0
+                  const total = effPrice ? stock * effPrice : 0
                   return (
                     <tr key={p.id} className="hover:bg-white/[0.02] print:hover:bg-transparent">
                       <td className="p-4 font-mono font-bold text-brand-gold print:text-neutral-700">{p.brand || '-'}</td>
                       <td className="p-4 text-white font-semibold print:text-black">{p.name}</td>
                       <td className="p-4 text-slate-300 font-medium print:text-neutral-600">{category}</td>
                       <td className="p-4 text-center font-mono font-bold text-white print:text-black">{stock} un</td>
-                      <td className="p-4 text-right font-mono text-white font-medium print:text-neutral-700">{p.price ? formatPrice(p.price) : 'Sob Consulta'}</td>
-                      <td className="p-4 text-right font-mono text-brand-gold-light font-bold print:text-black">{p.price ? formatPrice(total) : 'Sob Consulta'}</td>
+                      <td className="p-4 text-right font-mono text-white font-medium print:text-neutral-700">{effPrice ? formatPrice(effPrice) : 'Sob Consulta'}</td>
+                      <td className="p-4 text-right font-mono text-brand-gold-light font-bold print:text-black">{effPrice ? formatPrice(total) : 'Sob Consulta'}</td>
                     </tr>
                   )
                 })}
@@ -707,19 +761,24 @@ export default function AdminMovimentacoesPage() {
       const totalSales = salesMovements.length
       const totalItemsSold = salesMovements.reduce((acc, m) => acc + m.quantity, 0)
       const totalRevenue = salesMovements.reduce((acc, m) => acc + (m.quantity * (m.sale_price || 0)), 0)
+      const totalCost = salesMovements.reduce((acc, m) => acc + (m.quantity * (m.cost_price || 0)), 0)
       const totalVista = salesMovements.filter(m => m.payment_type === 'vista').reduce((acc, m) => acc + (m.quantity * (m.sale_price || 0)), 0)
       const totalParcelado = salesMovements.filter(m => m.payment_type === 'parcelado').reduce((acc, m) => acc + (m.quantity * (m.sale_price || 0)), 0)
 
       return (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="bg-white/[0.03] border border-white/10 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
-              <span className="text-xs font-sans font-bold text-brand-gold uppercase tracking-wider print:text-neutral-600">Transações de Venda</span>
+              <span className="text-xs font-sans font-bold text-brand-gold uppercase tracking-wider print:text-neutral-600">Transações</span>
               <span className="text-3xl font-title text-white font-bold mt-2 print:text-black">{totalSales}</span>
             </div>
             <div className="bg-white/[0.03] border border-white/10 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
-              <span className="text-xs font-sans font-bold text-brand-gold uppercase tracking-wider print:text-neutral-600">Unidades Vendidas</span>
+              <span className="text-xs font-sans font-bold text-brand-gold uppercase tracking-wider print:text-neutral-600">Unidades Vend.</span>
               <span className="text-3xl font-title text-white font-bold mt-2 print:text-black">{totalItemsSold} un</span>
+            </div>
+            <div className="bg-white/[0.03] border border-white/10 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
+              <span className="text-xs font-sans font-bold text-brand-gold uppercase tracking-wider print:text-neutral-600">Custo Produtos</span>
+              <span className="text-3xl font-title text-white font-bold mt-2 print:text-black">{formatPrice(totalCost)}</span>
             </div>
             <div className="bg-white/[0.03] border border-white/10 p-5 rounded-lg flex flex-col justify-between print:border-neutral-200 print:text-black">
               <span className="text-xs font-sans font-bold text-brand-gold uppercase tracking-wider print:text-neutral-600">Faturamento Bruto</span>
@@ -763,7 +822,7 @@ export default function AdminMovimentacoesPage() {
                         <td className="p-4 text-center font-mono font-bold print:text-black">{m.quantity} un</td>
                         <td className="p-4 text-right font-mono font-medium print:text-neutral-700">{formatPrice(m.sale_price)}</td>
                         <td className="p-4 text-right font-mono text-white font-bold print:text-black">{formatPrice(total)}</td>
-                        <td className="p-4 text-slate-300 font-medium print:text-neutral-700">{m.customer_name || '-'}</td>
+                        <td className="p-4 text-slate-300 font-medium print:text-neutral-700">{m.customers?.name || m.customer_name || '-'}</td>
                         <td className="p-4 text-slate-300 font-bold uppercase print:text-neutral-700 text-xs">{m.payment_type === 'vista' ? 'À Vista' : 'Parcelado'}</td>
                         <td className="p-4 text-xs print:text-black">
                           <span className={`font-bold uppercase px-2 py-0.5 rounded border ${
@@ -880,7 +939,7 @@ export default function AdminMovimentacoesPage() {
       
       const customerMap: Record<string, { name: string, count: number, total: number, qty: number }> = {}
       salesMovements.forEach((m) => {
-        const key = m.customer_name?.trim() || 'Cliente Não Identificado'
+        const key = (m.customers?.name || m.customer_name || '').trim() || 'Cliente Não Identificado'
         if (!customerMap[key]) {
           customerMap[key] = {
             name: key,
@@ -1016,16 +1075,16 @@ export default function AdminMovimentacoesPage() {
                         <td className="p-4 font-mono text-brand-silver print:text-neutral-600">{new Date(m.movement_date).toLocaleDateString('pt-BR')}</td>
                         <td className="p-4 print:text-black">
                           {m.type === 'entrada' ? (
-                            <span className="px-2 py-0.5 text-[8px] font-sans font-bold uppercase text-green-400 bg-green-950/45 border border-green-500/20 rounded">Compra</span>
+                            <span className="px-2.5 py-0.5 text-[9px] font-sans font-bold uppercase text-green-400 bg-green-950/45 border border-green-500/25 rounded">Compra</span>
                           ) : (
-                            <span className="px-2 py-0.5 text-[8px] font-sans font-bold uppercase text-red-400 bg-red-950/45 border border-red-500/20 rounded">Venda</span>
+                            <span className="px-2.5 py-0.5 text-[9px] font-sans font-bold uppercase text-red-400 bg-red-950/45 border border-red-500/25 rounded">Venda</span>
                           )}
                         </td>
                         <td className="p-4 text-center font-mono print:text-black">{m.quantity} un</td>
                         <td className="p-4 text-right font-mono text-brand-silver print:text-neutral-600">{m.cost_price ? formatPrice(m.cost_price) : '-'}</td>
                         <td className="p-4 text-right font-mono print:text-neutral-600">{m.sale_price ? formatPrice(m.sale_price) : '-'}</td>
                         <td className="p-4 text-right font-mono text-white font-semibold print:text-black">{formatPrice(total)}</td>
-                        <td className="p-4 text-brand-silver print:text-neutral-700 max-w-xs truncate">{m.type === 'saida' ? (m.customer_name || 'Geral') : (m.notes || 'Entrada de estoque')}</td>
+                        <td className="p-4 text-brand-silver print:text-neutral-700 max-w-xs truncate">{m.type === 'saida' ? (m.customers?.name || m.customer_name || 'Geral') : (m.notes || 'Entrada de estoque')}</td>
                       </tr>
                     )
                   })
@@ -1215,7 +1274,7 @@ export default function AdminMovimentacoesPage() {
 
                     {/* Cliente */}
                     <td className="py-4 text-brand-silver max-w-xs truncate">
-                      {m.customer_name || '-'}
+                      {m.customers?.name || m.customer_name || '-'}
                     </td>
 
                     {/* Status de Pagamento */}
@@ -1354,7 +1413,7 @@ export default function AdminMovimentacoesPage() {
             </div>
 
             {/* Filters Row */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-5 bg-black/40 border border-white/5 rounded-lg print:hidden">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 p-5 bg-black/40 border border-white/5 rounded-lg print:hidden">
               <div className="flex flex-col gap-1">
                 <label className="text-[9px] font-sans text-brand-gold uppercase tracking-widest">Tipo de Relatório</label>
                 <select
@@ -1400,6 +1459,21 @@ export default function AdminMovimentacoesPage() {
                 >
                   {products.map((p) => (
                     <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className={`flex flex-col gap-1 ${reportType === 'estoque' || reportType === 'produto_especifico' ? 'opacity-30 pointer-events-none' : ''}`}>
+                <label className="text-[9px] font-sans text-brand-gold uppercase tracking-widest">Cliente Selecionado</label>
+                <select
+                  value={reportCustomerId}
+                  onChange={(e) => setReportCustomerId(e.target.value)}
+                  disabled={reportType === 'estoque' || reportType === 'produto_especifico'}
+                  className="bg-brand-black border border-white/10 text-xs font-sans text-white rounded p-2.5 focus:outline-none focus:border-brand-gold cursor-pointer disabled:cursor-not-allowed appearance-none"
+                >
+                  <option value="all">Todos os Clientes</option>
+                  {customersList.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
               </div>
@@ -1457,7 +1531,7 @@ export default function AdminMovimentacoesPage() {
                   if (!p) return null
                   return (
                     <div className="mt-2 text-[10px] font-sans text-brand-silver flex justify-between px-1">
-                      <span>Preço base: <strong className="text-white">{formatPrice(p.price)}</strong></span>
+                      <span>Preço atual: <strong className="text-white">{formatPrice(p.effective_price || 0)}</strong></span>
                       <span>Disponível em estoque: <strong className={(p.stock_quantity || 0) > 0 ? "text-green-400" : "text-red-400"}>{p.stock_quantity || 0} un</strong></span>
                     </div>
                   )
@@ -1617,15 +1691,21 @@ export default function AdminMovimentacoesPage() {
 
                   {/* Cliente */}
                   <div>
-                    <label className="block text-[10px] font-sans text-brand-gold uppercase tracking-widest mb-1.5">Cliente (Nome) *</label>
-                    <input
-                      type="text"
-                      required
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      placeholder="Ex: João Silva"
-                      className="w-full bg-black border border-white/10 rounded px-4 py-3 text-xs font-sans focus:outline-none focus:border-brand-gold text-white"
-                    />
+                    <label className="block text-[10px] font-sans text-brand-gold uppercase tracking-widest mb-1.5">Cliente</label>
+                    <select
+                      value={customerId}
+                      onChange={(e) => {
+                        setCustomerId(e.target.value)
+                        const cName = customersList.find(c => c.id === e.target.value)?.name || ''
+                        setCustomerName(cName)
+                      }}
+                      className="w-full bg-black border border-white/10 rounded px-4 py-3 text-sm font-sans focus:outline-none focus:border-brand-gold text-white appearance-none"
+                    >
+                      <option value="">-- Selecione o Cliente --</option>
+                      {customersList.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
                   </div>
 
                   {/* Condição de Pagamento */}
@@ -1748,7 +1828,7 @@ export default function AdminMovimentacoesPage() {
                 Abatimentos & Recebimentos
               </h3>
               <p className="font-sans text-xs text-brand-silver mt-1">
-                Cliente: <strong className="text-white">{paymentMovement.customer_name || 'Geral / Não Identificado'}</strong> | Produto: <strong className="text-white">{paymentMovement.products?.name}</strong>
+                Cliente: <strong className="text-white">{paymentMovement.customers?.name || paymentMovement.customer_name || 'Geral / Não Identificado'}</strong> | Produto: <strong className="text-white">{paymentMovement.products?.name}</strong>
               </p>
             </div>
 
