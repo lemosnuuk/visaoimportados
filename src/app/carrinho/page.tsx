@@ -231,15 +231,44 @@ export default function CartPage() {
 
                   <div>
                     <label className="block text-[10px] font-sans text-brand-gold uppercase tracking-widest mb-2">Forma de Pagamento Desejada</label>
-                    <select
-                      value={paymentMethod}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded px-4 py-3 text-xs font-sans focus:outline-none focus:border-brand-gold text-white appearance-none cursor-pointer"
-                    >
-                      <option value="Pix">Pix (À vista)</option>
-                      <option value="Dinheiro">Dinheiro (À vista)</option>
-                      <option value="Cartão de Crédito">Cartão de Crédito (Sujeito a taxas)</option>
-                    </select>
+                    <div className="flex flex-col gap-2">
+                      <label className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-lg cursor-pointer hover:bg-white/10 transition-colors">
+                        <input 
+                          type="radio" 
+                          name="cartPaymentMethod" 
+                          value="Pix" 
+                          checked={paymentMethod === 'Pix'} 
+                          onChange={(e) => setPaymentMethod(e.target.value)}
+                          className="accent-brand-gold w-3.5 h-3.5"
+                        />
+                        <span className="font-sans text-xs text-white">Pix (À vista)</span>
+                      </label>
+                      <label className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-lg cursor-pointer hover:bg-white/10 transition-colors">
+                        <input 
+                          type="radio" 
+                          name="cartPaymentMethod" 
+                          value="Dinheiro" 
+                          checked={paymentMethod === 'Dinheiro'} 
+                          onChange={(e) => setPaymentMethod(e.target.value)}
+                          className="accent-brand-gold w-3.5 h-3.5"
+                        />
+                        <span className="font-sans text-xs text-white">Dinheiro (À vista)</span>
+                      </label>
+                      <label className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-lg cursor-pointer hover:bg-white/10 transition-colors">
+                        <input 
+                          type="radio" 
+                          name="cartPaymentMethod" 
+                          value="Cartão de Crédito" 
+                          checked={paymentMethod === 'Cartão de Crédito'} 
+                          onChange={(e) => setPaymentMethod(e.target.value)}
+                          className="accent-brand-gold w-3.5 h-3.5"
+                        />
+                        <div className="flex flex-col">
+                          <span className="font-sans text-xs text-white">Cartão de Crédito</span>
+                          <span className="font-sans text-[9px] text-brand-silver">Sujeito a taxas. Consulte no atendimento.</span>
+                        </div>
+                      </label>
+                    </div>
                   </div>
 
                   <button

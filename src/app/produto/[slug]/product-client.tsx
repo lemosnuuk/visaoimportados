@@ -284,33 +284,35 @@ export default function ProductClientPage({ product }: { product: Product }) {
                     </p>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-4 flex-wrap">
-                    {product.sale_price ? (
-                      <>
-                        <span className="text-2xl sm:text-3xl font-sans font-bold text-brand-gold-light">
-                          {formatPrice(product.sale_price)}
-                        </span>
-                        <span className="text-sm font-sans text-slate-400 line-through">
+                  <>
+                    <div className="flex items-center gap-4 flex-wrap">
+                      {product.sale_price ? (
+                        <>
+                          <span className="text-2xl sm:text-3xl font-sans font-bold text-brand-gold-light">
+                            {formatPrice(product.sale_price)}
+                          </span>
+                          <span className="text-sm font-sans text-slate-400 line-through">
+                            {formatPrice(product.price)}
+                          </span>
+                          {(product as any).is_campaign && product.price && product.price > product.sale_price && (
+                            <span className="px-2.5 py-1 bg-red-600/90 text-white font-sans font-black text-xs uppercase tracking-wider rounded shadow-md">
+                              -{Math.round(((product.price - product.sale_price) / product.price) * 100)}% OFF
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-2xl sm:text-3xl font-sans font-bold text-white">
                           {formatPrice(product.price)}
                         </span>
-                        {(product as any).is_campaign && product.price && product.price > product.sale_price && (
-                          <span className="px-2.5 py-1 bg-red-600/90 text-white font-sans font-black text-xs uppercase tracking-wider rounded shadow-md">
-                            -{Math.round(((product.price - product.sale_price) / product.price) * 100)}% OFF
-                          </span>
-                        )}
-                      </>
-                    ) : (
-                      <span className="text-2xl sm:text-3xl font-sans font-bold text-white">
-                        {formatPrice(product.price)}
-                      </span>
-                    )}
-                  </div>
-                  
-                  {/* Pix / Cartão Info */}
-                  <div className="mt-2 text-xs font-sans text-brand-silver">
-                    Valores referentes ao pagamento à vista via PIX.<br/>
-                    Para pagamentos no cartão de crédito, consulte taxas.
-                  </div>
+                      )}
+                    </div>
+                    
+                    {/* Pix / Cartão Info */}
+                    <div className="mt-2 text-xs font-sans text-brand-silver">
+                      Valores referentes ao pagamento à vista via PIX.<br/>
+                      Para pagamentos no cartão de crédito, consulte taxas.
+                    </div>
+                  </>
                 )}
                 <span className="text-[11px] font-sans text-slate-400 block mt-3">
                   * Valores sujeitos a alteração cambial ou de taxas aduaneiras.
@@ -330,15 +332,15 @@ export default function ProductClientPage({ product }: { product: Product }) {
                 <div className="flex flex-col sm:flex-row gap-4">
                   <button
                     onClick={() => setIsBuyModalOpen(true)}
-                    className="w-full flex justify-center items-center gap-2 py-4 rounded-xl text-white font-sans font-bold uppercase tracking-widest transition-all duration-300 bg-white/5 border border-white/10 hover:border-brand-gold shadow-md hover:shadow-brand-gold/10 hover:bg-gold-gradient hover:text-black mt-3"
+                    className="flex-1 flex items-center justify-center gap-2 py-4 bg-gold-gradient text-black font-sans font-bold text-[11px] sm:text-xs uppercase tracking-widest rounded hover:opacity-95 transition-all duration-300 shadow-lg shadow-brand-gold/10 text-center px-2 leading-tight"
                   >
-                    <Send className="w-4.5 h-4.5" />
+                    <Send className="w-4 h-4 shrink-0" />
                     {isPriceConsultable ? 'Consultar Valor no WhatsApp' : 'Comprar pelo WhatsApp'}
                   </button>
 
                   <button
                     onClick={handleAddToCart}
-                    className={`flex-1 flex items-center justify-center gap-2 py-4 border font-sans font-bold text-xs uppercase tracking-widest rounded transition-all duration-300 ${
+                    className={`flex-1 flex items-center justify-center gap-2 py-4 border font-sans font-bold text-[11px] sm:text-xs uppercase tracking-widest rounded transition-all duration-300 text-center px-2 leading-tight ${
                       isAdded
                         ? 'bg-green-950 border-green-500 text-green-400'
                         : 'bg-transparent border-white/20 text-white hover:border-brand-gold hover:text-brand-gold'
