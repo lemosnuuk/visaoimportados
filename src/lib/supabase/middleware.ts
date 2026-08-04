@@ -58,6 +58,11 @@ export async function updateSession(request: NextRequest) {
       await supabase.auth.signOut()
       const url = request.nextUrl.clone()
       url.pathname = '/admin/login'
+      if (error) {
+        url.searchParams.set('auth_error', error.message || error.code || 'unknown_db_error')
+      } else {
+        url.searchParams.set('auth_error', 'not_found_in_admin_users')
+      }
       return NextResponse.redirect(url)
     }
   }

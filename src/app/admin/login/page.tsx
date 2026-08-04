@@ -15,6 +15,18 @@ export default function AdminLoginPage() {
   const [successMsg, setSuccessMsg] = useState('')
   const [loading, setLoading] = useState(false)
 
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const err = params.get('auth_error')
+    if (err) {
+      if (err === 'not_found_in_admin_users') {
+        setErrorMsg('Acesso negado: Seu usuário não está na tabela de administradores.')
+      } else {
+        setErrorMsg(`Erro de banco de dados: ${err}`)
+      }
+    }
+  }, [])
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setErrorMsg('')
@@ -34,8 +46,9 @@ export default function AdminLoginPage() {
         return
       }
 
-      router.push('/admin')
-      router.refresh()
+      // Força um recarregamento da página para que o middleware valide corretamente.
+      // Se ele não for admin, será ejetado e a tela recarregará, evitando o 'loading' infinito.
+      window.location.href = '/admin'
     } catch (err) {
       console.error(err)
       setErrorMsg('Erro inesperado ao realizar o login.')
