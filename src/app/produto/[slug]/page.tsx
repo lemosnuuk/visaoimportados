@@ -21,6 +21,7 @@ async function getProduct(slug: string) {
         product_images(image_url, display_order)
       `)
       .eq('slug', slug)
+      .eq('is_public', true)
       .single()
 
     if (error || !product) {

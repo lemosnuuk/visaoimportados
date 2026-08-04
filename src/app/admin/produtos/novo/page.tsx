@@ -29,6 +29,7 @@ export default function AdminNovoProdutoPage() {
   const [description, setDescription] = useState('')
   const [status, setStatus] = useState<'in_stock' | 'pre_order' | 'on_request'>('in_stock')
   const [featured, setFeatured] = useState(false)
+  const [isPublic, setIsPublic] = useState(true)
   const [displayOrder, setDisplayOrder] = useState('0')
   const [initialStock, setInitialStock] = useState('')
   const [initialCost, setInitialCost] = useState('')
@@ -187,7 +188,8 @@ export default function AdminNovoProdutoPage() {
           description,
           status: finalStatus,
           featured,
-          display_order: parseInt(displayOrder) || 0
+          display_order: parseInt(displayOrder) || 0,
+          is_public: isPublic
         }])
         .select()
 
@@ -415,7 +417,7 @@ export default function AdminNovoProdutoPage() {
               />
             </div>
 
-            <div className="flex items-center h-full pt-6">
+            <div className="flex flex-col justify-center gap-4 h-full pt-6">
               <label className="flex items-center gap-3 cursor-pointer text-sm font-sans text-white">
                 <input
                   type="checkbox"
@@ -424,6 +426,16 @@ export default function AdminNovoProdutoPage() {
                   className="w-5 h-5 rounded bg-black border border-white/20 text-brand-gold focus:ring-0 cursor-pointer accent-brand-gold"
                 />
                 Marcar como Produto em Destaque (Exibe na Home)
+              </label>
+
+              <label className="flex items-center gap-3 cursor-pointer text-sm font-sans text-white">
+                <input
+                  type="checkbox"
+                  checked={isPublic}
+                  onChange={(e) => setIsPublic(e.target.checked)}
+                  className="w-5 h-5 rounded bg-black border border-white/20 text-brand-gold focus:ring-0 cursor-pointer accent-brand-gold"
+                />
+                Exibir Produto no Site (Se desmarcado, fica visível apenas no painel)
               </label>
             </div>
           </div>

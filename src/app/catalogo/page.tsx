@@ -154,10 +154,11 @@ function CatalogContent() {
         const { data: dbProducts } = await supabase
           .from('products')
           .select(`
-            id, name, brand, slug, description, price, sale_price, status, featured, display_order,
+            id, name, brand, slug, description, price, sale_price, status, featured, display_order, is_public,
             categories(name, slug),
             product_images(image_url, display_order)
           `)
+          .eq('is_public', true)
           .order('display_order', { ascending: true })
 
         if (dbCategories && dbCategories.length > 0) {
@@ -206,6 +207,15 @@ function CatalogContent() {
               campaign_badge: cPrices[p.id] ? activeCampaignFilter?.badge_label : null
             }
           })
+
+          const statusOrder: Record<string, number> = { 'in_stock': 1, 'pre_order': 2, 'on_request': 3 }
+          formattedProducts.sort((a: any, b: any) => {
+            if (statusOrder[a.status] !== statusOrder[b.status]) {
+              return (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99)
+            }
+            return (a.display_order ?? 0) - (b.display_order ?? 0)
+          })
+
           setProducts(formattedProducts)
         } else {
           setProducts([])

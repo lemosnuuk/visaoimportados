@@ -40,6 +40,7 @@ export default function AdminEditarProdutoPage({ params }: PageProps) {
   const [description, setDescription] = useState('')
   const [status, setStatus] = useState<'in_stock' | 'pre_order' | 'on_request'>('in_stock')
   const [featured, setFeatured] = useState(false)
+  const [isPublic, setIsPublic] = useState(true)
   const [displayOrder, setDisplayOrder] = useState('0')
   const [stockQuantity, setStockQuantity] = useState(0)
 
@@ -82,6 +83,7 @@ export default function AdminEditarProdutoPage({ params }: PageProps) {
         setDescription(prod.description || '')
         setStatus(prod.status)
         setFeatured(prod.featured)
+        setIsPublic(prod.is_public !== false)
         setDisplayOrder(String(prod.display_order))
         setStockQuantity(prod.stock_quantity || 0)
 
@@ -257,7 +259,8 @@ export default function AdminEditarProdutoPage({ params }: PageProps) {
           description,
           status,
           featured,
-          display_order: parseInt(displayOrder) || 0
+          display_order: parseInt(displayOrder) || 0,
+          is_public: isPublic
         })
         .eq('id', id)
 
@@ -465,7 +468,7 @@ export default function AdminEditarProdutoPage({ params }: PageProps) {
               />
             </div>
 
-            <div className="flex items-center h-full pt-6">
+            <div className="flex flex-col justify-center gap-4 h-full pt-6">
               <label className="flex items-center gap-3 cursor-pointer text-sm font-sans text-white">
                 <input
                   type="checkbox"
@@ -474,6 +477,16 @@ export default function AdminEditarProdutoPage({ params }: PageProps) {
                   className="w-5 h-5 rounded bg-black border border-white/20 text-brand-gold focus:ring-0 cursor-pointer accent-brand-gold"
                 />
                 Marcar como Produto em Destaque (Exibe na Home)
+              </label>
+
+              <label className="flex items-center gap-3 cursor-pointer text-sm font-sans text-white">
+                <input
+                  type="checkbox"
+                  checked={isPublic}
+                  onChange={(e) => setIsPublic(e.target.checked)}
+                  className="w-5 h-5 rounded bg-black border border-white/20 text-brand-gold focus:ring-0 cursor-pointer accent-brand-gold"
+                />
+                Exibir Produto no Site (Se desmarcado, fica visível apenas no painel)
               </label>
             </div>
           </div>

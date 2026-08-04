@@ -13,7 +13,9 @@ import {
   Star, 
   StarOff, 
   Image as ImageIcon,
-  Loader2
+  Loader2,
+  Eye,
+  EyeOff
 } from 'lucide-react'
 
 interface Product {
@@ -29,6 +31,7 @@ interface Product {
   category_name: string
   image_url: string | null
   stock_quantity: number
+  is_public: boolean
 }
 
 interface Category {
@@ -66,7 +69,7 @@ export default function AdminProdutosPage() {
       const { data: dbProds } = await supabase
         .from('products')
         .select(`
-          id, name, brand, slug, price, sale_price, status, featured, display_order, stock_quantity,
+          id, name, brand, slug, price, sale_price, status, featured, display_order, stock_quantity, is_public,
           categories(name),
           product_images(image_url, display_order)
         `)
@@ -91,7 +94,8 @@ export default function AdminProdutosPage() {
             display_order: p.display_order,
             category_name: p.categories?.name || 'Sem Categoria',
             image_url: imgUrl,
-            stock_quantity: p.stock_quantity || 0
+            stock_quantity: p.stock_quantity || 0,
+            is_public: p.is_public !== false
           }
         })
         setProducts(formatted)
@@ -179,6 +183,13 @@ export default function AdminProdutosPage() {
       default:
         return <span className="px-3 py-1 text-xs font-sans font-bold uppercase text-slate-300 bg-white/10 border border-white/15 rounded">{status}</span>
     }
+  }
+
+  const getVisibilityBadge = (isPublic: boolean) => {
+    if (isPublic) {
+      return <span className="px-2 py-1 text-[10px] font-sans font-bold uppercase text-blue-400 bg-blue-950/70 border border-blue-500/30 rounded flex items-center gap-1 w-max"><Eye className="w-3 h-3" /> Público</span>
+    }
+    return <span className="px-2 py-1 text-[10px] font-sans font-bold uppercase text-red-400 bg-red-950/70 border border-red-500/30 rounded flex items-center gap-1 w-max"><EyeOff className="w-3 h-3" /> Oculto</span>
   }
 
   return (
@@ -270,6 +281,7 @@ export default function AdminProdutosPage() {
                   <th className="py-4">Preço Promocional</th>
                   <th className="py-4">Estoque</th>
                   <th className="py-4">Ordem</th>
+                  <th className="py-4">Visibilidade</th>
                   <th className="py-4">Status</th>
                   <th className="py-4">Destaque</th>
                   <th className="py-4 text-right">Ações</th>
@@ -324,6 +336,9 @@ export default function AdminProdutosPage() {
 
                     {/* Display Order */}
                     <td className="py-4 font-mono text-slate-300 font-bold">{p.display_order}</td>
+
+                    {/* Visibilidade */}
+                    <td className="py-4">{getVisibilityBadge(p.is_public)}</td>
 
                     {/* Status */}
                     <td className="py-4">{getStatusBadge(p.status)}</td>
