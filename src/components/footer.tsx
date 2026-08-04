@@ -101,14 +101,6 @@ export default function Footer() {
           &copy; {currentYear} VISÃO IMPORTADOS. Todos os direitos reservados.
         </span>
 
-        {/* Subtle Admin Link */}
-        <Link 
-          href="/admin" 
-          className="flex items-center gap-1 text-[10px] font-sans text-brand-silver/30 hover:text-brand-gold transition-colors"
-        >
-          <ShieldAlert className="w-3.5 h-3.5" />
-          Acesso Administrativo
-        </Link>
       </div>
     </footer>
   )
