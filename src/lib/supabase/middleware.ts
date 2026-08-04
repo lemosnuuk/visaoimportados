@@ -42,6 +42,24 @@ export async function updateSession(request: NextRequest) {
       url.pathname = '/admin/login'
       return NextResponse.redirect(url)
     }
+
+    // VERIFICAÇÃO DE AUTORIZAÇÃO (Administrador)
+    // Lê a tabela public.admin_users. Como a RLS só permite ler o próprio ID,
+    // se o registro for encontrado, o usuário atual é admin.
+    const { data: adminUser, error } = await supabase
+      .from('admin_users')
+      .select('user_id')
+      .eq('user_id', user.id)
+      .single()
+    
+    if (error || !adminUser) {
+      // Se não for admin, desloga o usuário (opcional) e manda pra tela de login
+      // ou manda para uma tela de acesso negado. Aqui mandamos para o login.
+      await supabase.auth.signOut()
+      const url = request.nextUrl.clone()
+      url.pathname = '/admin/login'
+      return NextResponse.redirect(url)
+    }
   }
 
   return supabaseResponse

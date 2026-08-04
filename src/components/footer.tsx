@@ -82,11 +82,11 @@ export default function Footer() {
             </li>
             <li className="flex items-center gap-2">
               <Instagram className="w-4 h-4 text-brand-gold shrink-0" />
-              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="hover:text-brand-gold">@visaoimportados</a>
+              <a href="https://instagram.com/visaoimportados" target="_blank" rel="noopener noreferrer" className="hover:text-brand-gold">@visaoimportados</a>
             </li>
             <li className="flex items-center gap-2">
               <Mail className="w-4 h-4 text-brand-gold shrink-0" />
-              <a href="mailto:contato@visaoimportados.com" className="hover:text-brand-gold">contato@visaoimportados.com</a>
+              <a href="mailto:visaodigitalnuvem@gmail.com" className="hover:text-brand-gold">visaodigitalnuvem@gmail.com</a>
             </li>
             <li className="flex items-center gap-2">
               <MapPin className="w-4 h-4 text-brand-gold shrink-0" />

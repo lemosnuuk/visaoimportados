@@ -1058,7 +1058,7 @@ export default function Home() {
                     </div>
                     <div>
                       <h4 className="font-title text-[10px] uppercase text-brand-gold tracking-widest">Instagram</h4>
-                      <p className="font-sans text-xs text-white mt-1">@visaoimportados</p>
+                      <a href="https://instagram.com/visaoimportados" target="_blank" rel="noopener noreferrer" className="font-sans text-xs text-white mt-1 block hover:text-brand-gold">@visaoimportados</a>
                     </div>
                   </div>
 
@@ -1068,7 +1068,7 @@ export default function Home() {
                     </div>
                     <div>
                       <h4 className="font-title text-[10px] uppercase text-brand-gold tracking-widest">E-mail</h4>
-                      <p className="font-sans text-xs text-white mt-1">contato@visaoimportados.com</p>
+                      <a href="mailto:visaodigitalnuvem@gmail.com" className="font-sans text-xs text-white mt-1 block hover:text-brand-gold">visaodigitalnuvem@gmail.com</a>
                     </div>
                   </div>
 
