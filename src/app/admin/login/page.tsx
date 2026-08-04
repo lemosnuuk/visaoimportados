@@ -5,18 +5,20 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ShieldAlert, KeyRound, Mail, Loader2 } from 'lucide-react'
+import { ShieldAlert, KeyRound, Mail, Loader2, CheckCircle2 } from 'lucide-react'
 
 export default function AdminLoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
+  const [successMsg, setSuccessMsg] = useState('')
   const [loading, setLoading] = useState(false)
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setErrorMsg('')
+    setSuccessMsg('')
     setLoading(true)
 
     try {
@@ -37,6 +39,35 @@ export default function AdminLoginPage() {
     } catch (err) {
       console.error(err)
       setErrorMsg('Erro inesperado ao realizar o login.')
+      setLoading(false)
+    }
+  }
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setErrorMsg('Por favor, digite seu e-mail para recuperar a senha.')
+      return
+    }
+    
+    setErrorMsg('')
+    setSuccessMsg('')
+    setLoading(true)
+
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      })
+
+      if (error) {
+        setErrorMsg('Erro ao enviar e-mail de recuperação.')
+      } else {
+        setSuccessMsg('E-mail de recuperação enviado! Verifique sua caixa de entrada.')
+      }
+    } catch (err) {
+      console.error(err)
+      setErrorMsg('Erro inesperado.')
+    } finally {
       setLoading(false)
     }
   }
@@ -64,6 +95,13 @@ export default function AdminLoginPage() {
           </div>
         )}
 
+        {successMsg && (
+          <div className="w-full p-4 mb-6 bg-green-950/40 border border-green-500/20 text-green-400 text-xs font-sans rounded flex items-center gap-3">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>{successMsg}</span>
+          </div>
+        )}
+
         <form onSubmit={handleLogin} className="w-full space-y-6">
           <div>
             <label className="block text-[10px] font-sans text-brand-gold uppercase tracking-widest mb-2">E-mail Administrativo</label>
@@ -81,7 +119,16 @@ export default function AdminLoginPage() {
           </div>
 
           <div>
-            <label className="block text-[10px] font-sans text-brand-gold uppercase tracking-widest mb-2">Senha de Acesso</label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-[10px] font-sans text-brand-gold uppercase tracking-widest">Senha de Acesso</label>
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                className="text-[10px] font-sans text-brand-silver hover:text-brand-gold transition-colors"
+              >
+                Esqueceu a senha?
+              </button>
+            </div>
             <div className="relative">
               <KeyRound className="w-4 h-4 text-brand-silver absolute left-4 top-1/2 -translate-y-1/2" />
               <input
